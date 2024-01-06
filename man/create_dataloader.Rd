@@ -32,7 +32,7 @@ Create a new dataloader for building a model
 }
 \examples{
 
-input = mtcars
-output = mtcars
-dl = create_dataloader(input,output)
+input = mtcars |> as.matrix()
+output = mtcars |> as.matrix()
+dl = create_dataloader(input,output,batch_size=2)
 }

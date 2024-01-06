@@ -12,9 +12,9 @@
 #'
 #' @examples
 #'
-#' input = mtcars
-#' output = mtcars
-#' dl = create_dataloader(input,output)
+#' input = mtcars |> as.matrix()
+#' output = mtcars |> as.matrix()
+#' dl = create_dataloader(input,output,batch_size=2)
 
 
 create_dataloader = function(input,output,aux=NULL,name="dl",batch_size=32,shuffle=TRUE){
@@ -56,7 +56,74 @@ create_dataloader = function(input,output,aux=NULL,name="dl",batch_size=32,shuff
   ## Create the dataloader
   dl = torch::dataloader(ds,batch_size=batch_size,shuffle=shuffle)
 
+  dl = create_scorch_dataloader_class(dl)
+
   return(dl)
+
+}
+
+
+## A utility function to create the scorch_dataloader class
+
+create_scorch_dataloader_class = function(dl) {
+  structure(dl, class = "scorch_dataloader")
+}
+
+
+#' Create the dataloader head function
+#'
+#' @param dl This is the data loader you want to see
+#'
+#' @export
+#'
+#' @examples
+#'
+#' input = mtcars |> as.matrix()
+#' output = mtcars |> as.matrix()
+#' dl = create_dataloader(input,output,batch_size=2)
+#' head(dl)
+
+
+head.scorch_dataloader = function(dl,...){
+  cat(crayon::blue("Head of input:\n\n"))
+  print(head(dl$.iter()$.next()$input,...))
+
+  cat("\n\n")
+
+  cat(crayon::blue("Head of output:\n\n"))
+  print(head(dl$.iter()$.next()$output,...))
+
+  cat("\n\n")
+
+  if(!is.null(dl$.iter()$.next()$aux)){
+    cat(crayon::blue("Head of aux:\n\n"))
+    print(head(dl$.iter()$.next()$aux,...))
+  }
+}
+
+
+
+#' Create the dataloader print function
+#'
+#' @param dl This is the data loader you want to see
+#'
+#' @export
+#'
+#' @examples
+#'
+#' input = mtcars |> as.matrix()
+#' output = mtcars |> as.matrix()
+#' dl = create_dataloader(input,output)
+#' dl
+
+
+print.scorch_dataloader = function(dl){
+  cat("This is a dataloader object with features:\n")
+  cat(paste0(" * Batch size: ",
+             crayon::red(dl$batch_size)))
+  cat("\n")
+  cat(paste0(" * Number of batches: ",
+             crayon::red(dl$.length())))
 
 }
 
