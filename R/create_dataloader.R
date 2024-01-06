@@ -125,5 +125,19 @@ print.scorch_dataloader = function(dl){
   cat(paste0(" * Number of batches: ",
              crayon::red(dl$.length())))
 
+  cat("\n")
+  cat(paste0(" * Dimension of input vectors: ",
+             crayon::red(dl$.iter()$.next()$input$shape[2])))
+
+  cat("\n")
+  cat(paste0(" * Dimension of output vectors: ",
+             crayon::red(dl$.iter()$.next()$output$shape[2])))
+
+  if(!is.null(dl$.iter()$.next()$aux)){
+    cat("\n")
+    cat(paste0(" * Dimension of aux vectors: ",
+             crayon::red(dl$.iter()$.next()$aux$shape[2])))
+  }
+
 }
 
