@@ -2,4 +2,6 @@
 
 S3method(head,scorch_dataloader)
 S3method(print,scorch_dataloader)
+export(compile_scorch)
 export(create_dataloader)
+export(initiate_scorch)
