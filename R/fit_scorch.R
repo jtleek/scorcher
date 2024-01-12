@@ -21,7 +21,7 @@ fit_scorch = function(scorch_model,
     coro::loop(for (batch in scorch_model$dl) {
       optim_fn$zero_grad()
       pred = scorch_model$nn_model(batch$input)
-      loss = loss_fn(pred, batch$output)  # assuming input x is your data
+      loss = loss_fn(pred, batch$output)
       loss$backward()
       optim_fn$step()
       total_loss = total_loss + loss$item()

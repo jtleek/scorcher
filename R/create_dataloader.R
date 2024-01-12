@@ -66,7 +66,9 @@ create_dataloader = function(input,output,aux=NULL,name="dl",batch_size=32,shuff
 ## A utility function to create the scorch_dataloader class
 
 create_scorch_dataloader_class = function(dl) {
-  structure(dl, class = "scorch_dataloader")
+  tmp = dl
+  class(tmp) = c("scorch_dataloader",class(dl))
+  return(tmp)
 }
 
 
