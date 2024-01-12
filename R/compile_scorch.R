@@ -11,7 +11,7 @@
 #' input = mtcars |> as.matrix()
 #' output = mtcars |> as.matrix()
 #' dl = create_dataloader(input,output,batch_size=2)
-#' model = dl |> initiate_scorch() |>
+#' scorch_model = dl |> initiate_scorch() |>
 #'   scorch_layer(nn_linear(11,5)) |>
 #'   scorch_layer(nn_linear(5,2)) |>
 #'   compile_scorch()
@@ -38,15 +38,15 @@ compile_scorch = function(sm){
     }
   )
 
- sm |> model()
+
+ return(list(nn_model = sm |> model(), dl = dl))
 
 }
 
 
-create_scorch_nn_module_class = function(model){
-    tmp = model
-    class(tmp) = c("scorch_nn_module",class(model))
-    return(tmp)
+create_scorch_nn_module_class = function(obj){
+    class(model) = c("compiled_scorch_model",class(model))
+    return(model)
 }
 
 print.scorch_nn_module = function(model){
