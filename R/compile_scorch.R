@@ -1,8 +1,8 @@
 #' Compile a scorch model
 #'
-#' @param sm A scorch model archecture
+#' @param sm A scorch model architecture
 #'
-#' @return A nn_module ready for training
+#' @return A scorch_model object with components (1) nn_module compiled and ready to train and (2) the scorch_dataloader object
 #'
 #' @export
 #'

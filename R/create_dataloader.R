@@ -87,20 +87,10 @@ create_scorch_dataloader_class = function(dl) {
 
 
 head.scorch_dataloader = function(dl,...){
-  cat(crayon::blue("Head of input:\n\n"))
-  print(head(dl$.iter()$.next()$input,...))
 
-  cat("\n\n")
+  return(list(input = head(dl$.iter()$.next()$input,...),
+         output = head(dl$.iter()$.next()$output,...)))
 
-  cat(crayon::blue("Head of output:\n\n"))
-  print(head(dl$.iter()$.next()$output,...))
-
-  cat("\n\n")
-
-  if(!is.null(dl$.iter()$.next()$aux)){
-    cat(crayon::blue("Head of aux:\n\n"))
-    print(head(dl$.iter()$.next()$aux,...))
-  }
 }
 
 

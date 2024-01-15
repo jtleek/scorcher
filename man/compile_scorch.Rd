@@ -7,10 +7,10 @@
 compile_scorch(sm)
 }
 \arguments{
-\item{sm}{A scorch model archecture}
+\item{sm}{A scorch model architecture}
 }
 \value{
-A nn_module ready for training
+A scorch_model object with components (1) nn_module compiled and ready to train and (2) the scorch_dataloader object
 }
 \description{
 Compile a scorch model
@@ -20,7 +20,7 @@ Compile a scorch model
 input = mtcars |> as.matrix()
 output = mtcars |> as.matrix()
 dl = create_dataloader(input,output,batch_size=2)
-model = dl |> initiate_scorch() |>
+scorch_model = dl |> initiate_scorch() |>
   scorch_layer(nn_linear(11,5)) |>
   scorch_layer(nn_linear(5,2)) |>
   compile_scorch()

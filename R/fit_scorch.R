@@ -1,3 +1,30 @@
+#' Fit a scorch model
+#'
+#' @param scorch_model A scorch model object
+#' @param loss A loss function from the torch package
+#' @param loss_params Parameters to pass to the loss function
+#' @param optim An optimizer from the torch package
+#' @param optim_params Parameters to pass to the optimizer
+#' @param num_epochs The number of epochs to train for
+#' @param verbose Whether to print loss results at each epoch
+#'
+#' @return A trained nn_module
+#'
+#' @export
+#'
+#' @examples
+#'
+#' input = mtcars |> as.matrix()
+#' output = mtcars |> as.matrix()
+#' dl = create_dataloader(input,output,batch_size=2)
+#' scorch_model = dl |> initiate_scorch() |>
+#'   scorch_layer(nn_linear(11,5)) |>
+#'   scorch_layer(nn_linear(5,2)) |>
+#'   compile_scorch() |>
+#'   fit_scorch()
+#'
+#' first_batch = head(dl)
+#' test_output = scorch_model(first_batch$input)
 
 
 
@@ -9,10 +36,12 @@ fit_scorch = function(scorch_model,
                       num_epochs = 10,
                       verbose=TRUE){
 
-  loss_fn = partial(loss,loss_params)()
+  loss_fn = do.call(loss,loss_params)
 
-  ## Problem seems to be here in getting optimization function right
-  optim_fn = partial(optim,scorch_model$nn_model$parameters,optim_params)()
+  optim_params = append(list(params = scorch_model$nn_model$parameters),
+                        optim_params)
+
+  optim_fn = do.call(optim,optim_params)
 
   length_dl = length(scorch_model$dl)
 
