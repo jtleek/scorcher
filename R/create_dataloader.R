@@ -1,8 +1,7 @@
 #' Create a new dataloader for building a model
 #'
-#' @param input A matrix with input data (usually your predictors)
-#' @param output A matrix with output data (usually what you are predicting)
-#' @param aux An (optional) matrix with auxiliary training data (usually for training/loss)
+#' @param input An input tensor (usually your predictors, first dimensions is index)
+#' @param output An output tensor (usually what you are predicting, first dimension is index)
 #' @param batch_size The size of the batch you want to load
 #' @param shuffle  Whether to randomly shuffle the samples
 #'
@@ -12,39 +11,33 @@
 #'
 #' @examples
 #'
-#' input = mtcars |> as.matrix()
-#' output = mtcars |> as.matrix()
+#' input = mtcars |> as.matrix() |> torch_tensor()
+#' output = mtcars |> as.matrix() |> torch_tensor()
 #' dl = create_dataloader(input,output,batch_size=2)
 
 
-create_dataloader = function(input,output,aux=NULL,name="dl",batch_size=32,shuffle=TRUE){
+create_dataloader = function(input,
+                             output,
+                             name="dl",
+                             batch_size=32,
+                             shuffle=TRUE){
 
 
   ## Check input arguments
-  stopifnot("`input` must be a matrix" = is.matrix(input))
-  stopifnot("`output` must be a matrix" = is.matrix(output))
+  stopifnot("`input` must be a tensor" = ("torch_tensor" %in% class(input)))
+  stopifnot("`output` must be a tensor" = ("torch_tensor" %in% class(output)))
 
-  if(!is.null(aux)){
-    stopifnot("`aux` must be a matrix" = is.matrix(aux))
-  }
 
   ## Set up dataset creator function
   create_dataset = torch::dataset(
     name = name,
     initialize = function(input,output,aux){
-      self$input = input |> torch::torch_tensor()
-      self$output = output |> torch::torch_tensor()
-      self$aux = aux
-      if(!is.null(aux)){
-        self$aux = aux |> torch::torch_tensor()
-      }
+      self$input = input
+      self$output = output
     },
     .getitem = function(index){
-      if(is.null(self$aux)){
-        list(input = self$input[index,],output=self$output[index,])
-      }else{
-        list(input = self$input[index,],output=self$output[index,],aux=self$aux[index,])
-      }
+        list(input = self$input[index],
+             output=self$output[index])
     },
     .length = function(){
       self$input$shape[1]
@@ -88,8 +81,9 @@ create_scorch_dataloader_class = function(dl) {
 
 head.scorch_dataloader = function(dl,...){
 
-  return(list(input = head(dl$.iter()$.next()$input,...),
-         output = head(dl$.iter()$.next()$output,...)))
+  val = dl$.iter()$.next()
+  return(list(input = head(val$input,...),
+         output = head(val$output,...)))
 
 }
 
@@ -118,18 +112,21 @@ print.scorch_dataloader = function(dl){
              crayon::red(dl$.length())))
 
   cat("\n")
-  cat(paste0(" * Dimension of input vectors: ",
-             crayon::red(dl$.iter()$.next()$input$shape[2])))
+  cat(paste0(" * Dimension of input tensors: ",
+             crayon::red(calc_dim(dl$.iter()$.next()$input))))
 
   cat("\n")
-  cat(paste0(" * Dimension of output vectors: ",
-             crayon::red(dl$.iter()$.next()$output$shape[2])))
+  cat(paste0(" * Dimension of output tensors: ",
+             crayon::red(calc_dim(dl$.iter()$.next()$output))))
 
-  if(!is.null(dl$.iter()$.next()$aux)){
-    cat("\n")
-    cat(paste0(" * Dimension of aux vectors: ",
-             crayon::red(dl$.iter()$.next()$aux$shape[2])))
-  }
 
 }
 
+calc_dim = function(tensor){
+  ndim = length(dim(tensor))
+  if(ndim==1){
+    return(1)
+  }else{
+    return(paste0(dim(tensor)[-1],collapse=" "))
+  }
+}

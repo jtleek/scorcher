@@ -16,3 +16,4 @@ Imports:
     glue,
     stringr,
     torch
+Config/Needs/website: rmarkdown

@@ -22,17 +22,30 @@ compile_scorch = function(sm){
   model = nn_module(
     initialize = function(sm){
       n_layer = length(sm$scorch_architecture)/2
+      layer_types = sm$scorch_architecture[2*(1:n_layer)] |> unlist()
+      layer_index = which(layer_types == "layer")*2-1
+      func_index = which(layer_types == "function")*2-1
       modules =
         nn_module_list(
-          sm$scorch_architecture[seq(1,n_layer*2,by=2)]
+          sm$scorch_architecture[layer_index]
         )
       self$modules = modules
+      self$functions = sm$scorch_architecture[func_index]
     },
     forward = function(input){
       n_layer = length(sm$scorch_architecture)/2
+      layer_types = sm$scorch_architecture[2*(1:n_layer)] |> unlist()
+      layer_index = which(layer_types == "layer")
       output = input
+      i_layer = i_function = 1
       for(i in 1:n_layer){
-        output = self$modules[[i]](output)
+        if(i %in% layer_index){
+          output = self$modules[[i_layer]](output)
+          i_layer = i_layer + 1
+        }else{
+          output = self$functions[[i_function]](output)
+          i_function. = i_function+1
+        }
       }
       return(output)
     }
@@ -61,4 +74,9 @@ print.scorch_nn_module = function(model){
     cat(
       glue::glue(" * Layer {i} has {crayon::red(n_params_layer[i])} parameters\n\n"))
   }
+}
+
+
+apply_layer = function(modules,functions,layer_index,n_layer){
+
 }

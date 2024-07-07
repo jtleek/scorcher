@@ -20,6 +20,8 @@
 #' scorch_model = dl |> initiate_scorch() |>
 #'   scorch_layer(nn_linear(11,5)) |>
 #'   scorch_layer(nn_linear(5,2)) |>
+#'   scorch_layer(nn_linear(2,5)) |>
+#'   scorch_layer(nn_linear(5,11)) |>
 #'   compile_scorch() |>
 #'   fit_scorch()
 #'
