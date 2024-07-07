@@ -2,20 +2,30 @@
 % Please edit documentation in R/create_dataloader.R
 \name{print.scorch_dataloader}
 \alias{print.scorch_dataloader}
-\title{Create the dataloader print function}
+\title{Print Method for Scorch Dataloader}
 \usage{
-\method{print}{scorch_dataloader}(dl)
+\method{print}{scorch_dataloader}(x, ...)
 }
 \arguments{
-\item{dl}{This is the data loader you want to see}
+\item{x}{An object of class 'scorch_dataloader'.}
+
+\item{...}{Additional arguments to be passed to the print function.}
+}
+\value{
+NULL. This function is called for its side effect of printing
+information about the dataloader.
 }
 \description{
-Create the dataloader print function
+Defines the print method for objects of class 'scorch_dataloader', providing
+a summary of its features.
 }
 \examples{
 
-input = mtcars |> as.matrix()
-output = mtcars |> as.matrix()
+input  = mtcars |> as.matrix() |> torch::torch_tensor()
+
+output = mtcars |> as.matrix() |> torch::torch_tensor()
+
 dl = create_dataloader(input,output)
-dl
+
+print(dl)
 }

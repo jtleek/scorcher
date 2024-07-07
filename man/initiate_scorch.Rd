@@ -17,8 +17,11 @@ Initiate a scorch model
 }
 \examples{
 
-input = mtcars |> as.matrix()
-output = mtcars |> as.matrix()
-dl = create_dataloader(input,output,batch_size=2)
+input  = mtcars |> as.matrix() |> torch::torch_tensor()
+
+output = mtcars |> as.matrix() |> torch::torch_tensor()
+
+dl = create_dataloader(input, output, batch_size = 2)
+
 dl |> initiate_scorch()
 }

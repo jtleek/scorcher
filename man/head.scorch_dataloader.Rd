@@ -2,20 +2,30 @@
 % Please edit documentation in R/create_dataloader.R
 \name{head.scorch_dataloader}
 \alias{head.scorch_dataloader}
-\title{Create the dataloader head function}
+\title{Head Method for Scorch Dataloader}
 \usage{
-\method{head}{scorch_dataloader}(dl, ...)
+\method{head}{scorch_dataloader}(x, ...)
 }
 \arguments{
-\item{dl}{This is the data loader you want to see}
+\item{x}{An object of class 'scorch_dataloader'.}
+
+\item{...}{Additional arguments to be passed to the head function.}
+}
+\value{
+A list containing the first elements of the input and output data
+from the dataloader.
 }
 \description{
-Create the dataloader head function
+Defines the head method for objects of class 'scorch_dataloader', returning
+the first elements of the input and output data.
 }
 \examples{
 
-input = mtcars |> as.matrix()
-output = mtcars |> as.matrix()
+input  = mtcars |> as.matrix() |> torch::torch_tensor()
+
+output = mtcars |> as.matrix() |> torch::torch_tensor()
+
 dl = create_dataloader(input,output,batch_size=2)
+
 head(dl)
 }

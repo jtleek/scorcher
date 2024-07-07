@@ -2,37 +2,37 @@
 % Please edit documentation in R/create_dataloader.R
 \name{create_dataloader}
 \alias{create_dataloader}
-\title{Create a new dataloader for building a model}
+\title{Create a New Dataloader for Building a Scorch Model}
 \usage{
-create_dataloader(
-  input,
-  output,
-  aux = NULL,
-  name = "dl",
-  batch_size = 32,
-  shuffle = TRUE
-)
+create_dataloader(input, output, name = "dl", batch_size = 32, shuffle = TRUE)
 }
 \arguments{
-\item{input}{A matrix with input data (usually your predictors)}
+\item{input}{A tensor representing the input data (usually your predictors,
+first dimensions is index).}
 
-\item{output}{A matrix with output data (usually what you are predicting)}
+\item{output}{A tensor representing the output data (usually what you are
+predicting, first dimension is index).}
 
-\item{aux}{An (optional) matrix with auxiliary training data (usually for training/loss)}
+\item{name}{A character string representing the name of the dataloader.
+Default is "dl".}
 
-\item{batch_size}{The size of the batch you want to load}
+\item{batch_size}{An integer specifying the batch size. Default is 32.}
 
-\item{shuffle}{Whether to randomly shuffle the samples}
+\item{shuffle}{A logical value indicating whether to shuffle the data.
+Default is TRUE.}
 }
 \value{
-The dataloader with the specified batch size as a scorch_dataloader
+The dataloader with the specified batch size as a scorch_dataloader.
 }
 \description{
-Create a new dataloader for building a model
+This function creates a dataloader for building a scorch model from the
+given input and output tensors.
 }
 \examples{
 
-input = mtcars |> as.matrix()
-output = mtcars |> as.matrix()
-dl = create_dataloader(input,output,batch_size=2)
+input = mtcars  |> as.matrix() |> torch::torch_tensor()
+
+output = mtcars |> as.matrix() |> torch::torch_tensor()
+
+dl = create_dataloader(input, output, batch_size = 2)
 }

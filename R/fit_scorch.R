@@ -1,4 +1,4 @@
-#' Fit a scorch model
+#' Fit a Scorch Model
 #'
 #' @param scorch_model A scorch model object
 #' @param loss A loss function from the torch package
@@ -14,16 +14,28 @@
 #'
 #' @examples
 #'
-#' input = mtcars |> as.matrix()
-#' output = mtcars |> as.matrix()
+#' input  = mtcars |> as.matrix() |> torch::torch_tensor()
+#'
+#' output = mtcars |> as.matrix() |> torch::torch_tensor()
+#'
 #' dl = create_dataloader(input,output,batch_size=2)
+#'
 #' scorch_model = dl |> initiate_scorch() |>
-#'   scorch_layer(nn_linear(11,5)) |>
-#'   scorch_layer(nn_linear(5,2)) |>
+#'
+#'   scorch_layer(torch::nn_linear(11,5)) |>
+#'
+#'   scorch_layer(torch::nn_linear(5,2)) |>
+#'
+#'   scorch_layer(torch::nn_linear(2,5)) |>
+#'
+#'   scorch_layer(torch::nn_linear(5,11)) |>
+#'
 #'   compile_scorch() |>
+#'
 #'   fit_scorch()
 #'
 #' first_batch = head(dl)
+#'
 #' test_output = scorch_model(first_batch$input)
 
 
