@@ -1,4 +1,7 @@
 ^scorcher\.Rproj$
 ^\.Rproj\.user$
 ^vignettes/articles$
+<<<<<<< HEAD
 ^LICENSE\.md$
+=======
+>>>>>>> 8618775d7a070784ef0a1d428ab1aa44fc423163

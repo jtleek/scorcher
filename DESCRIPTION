@@ -16,3 +16,7 @@ Imports:
     stringr,
     torch
 Config/Needs/website: rmarkdown
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr

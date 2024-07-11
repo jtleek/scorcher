@@ -1,0 +1,230 @@
+---
+title: "Fitting Neural Networks with Scorcher using the Palmer Penguins Dataset"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Fitting Neural Networks with Scorcher using the Palmer Penguins Dataset}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  error = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  comment = "#>",
+  out.width = "100%",
+  fig.retina = 2,
+  fig.align = 'center'
+)
+```
+
+## Introduction
+
+This vignette demonstrates how to use the `scorcher` package to fit a neural network using the [Palmer Penguins](https://allisonhorst.github.io/palmerpenguins/index.html) dataset. The Palmer Penguins dataset consists of data collected by [Dr. Kristen Gorman](https://www.uaf.edu/cfos/people/faculty/detail/kristen-gorman.php) and the [Palmer Station, Antarctica LTER](https://pallter.marine.rutgers.edu/), and includes observations on three species of penguins: Adelie, Chinstrap, and Gentoo. The dataset contains 344 observations with seven variables: species, island (Biscoe, Dream, Torgersen), bill length (mm), bill depth (mm), flipper length (mm), body mass (g), and sex (male, female). This dataset is a wonderful alternative to the [Iris](https://www.rdocumentation.org/packages/datasets/versions/3.6.2/topics/iris) dataset and provides an excellent resource for exploring various statistical and machine learning techniques, particularly due to its inclusion of both numerical and categorical data. In this vignette, we will train a neural network on the penguins' bill length and depth, flipper length, body mass, sex, and island to predict their species.
+
+<br>
+
+<img src="https://allisonhorst.github.io/palmerpenguins/reference/figures/lter_penguins.png" alt="'Meet the Palmer penguins' Artwork by @allison_horst" width="100%">
+"Meet the Palmer Penguins" Artwork by @allison_horst
+
+<br>
+
+## Setup
+
+### Installing and Loading Required Packages
+
+Before we begin, ensure that you have the necessary packages installed. You can install them using the following commands:
+
+```{r install, eval = F}
+install.packages("palmerpenguins")
+install.packages("scorcher")
+```
+
+Additionally, you'll need to install torch dependencies. Follow the instructions provided [here](https://torch.mlverse.org/start/installation/) to install torch. Then, you can load the `scorcher` library with:
+
+```{r setup}
+library(scorcher)
+```
+
+### Loading the Data
+
+We'll now load the Palmer Penguins dataset.
+
+```{r}
+library(palmerpenguins)
+data("penguins")
+
+# Removing rows with missing values for simplicity
+
+penguins <- na.omit(penguins)
+
+# Print the first few rows of the data
+
+head(penguins)
+```
+
+### Visualizing the Data
+
+Let's visualize the dataset to better understand its structure and relationships.
+
+```{r, fig.width=6, fig.height=4}
+# Visualizing the Palmer Penguins data
+
+library(tidyverse)
+library(ggimage)
+
+penguins |>
+  ggplot(aes(x = bill_length_mm, y = bill_depth_mm)) +
+    geom_image(
+      data = tibble(bill_length_mm = 35, bill_depth_mm = 10),
+      aes(image = "https://allisonhorst.github.io/palmerpenguins/reference/figures/culmen_depth.png"), 
+      size = 1) +
+    theme_minimal() +
+    geom_point(aes(color = species, shape = species), size = 3, alpha = 0.8) +
+    geom_smooth(aes(color = species, shape = species), method = "lm", se = FALSE) + 
+    scale_color_manual(values = c("darkorange","purple","cyan4")) +
+    ylim(c(10, 22.5)) +
+    labs(title = "Bill length and depth",
+         subtitle = "Dimensions for Adelie, Chinstrap and Gentoo Penguins at Palmer Station LTER",
+         x = "Bill Length (mm)",
+         y = "Bill Depth (mm)",
+         color = "Species",
+        shape = "Species") +
+    theme(legend.position = "bottom")
+  
+```
+
+### Data Preprocessing
+
+For our neural network, we need to preprocess the data. This includes normalizing the numerical features and encoding the categorical features.
+
+```{r}
+# Normalizing numerical features
+
+penguins$bill_length_mm <- scale(penguins$bill_length_mm)
+penguins$bill_depth_mm <- scale(penguins$bill_depth_mm)
+penguins$flipper_length_mm <- scale(penguins$flipper_length_mm)
+penguins$body_mass_g <- scale(penguins$body_mass_g)
+
+# Encoding categorical features
+
+penguins$species <- as.integer(as.factor(penguins$species)) 
+penguins$island <- as.integer(as.factor(penguins$island))
+penguins$sex <- as.integer(as.factor(penguins$sex))
+```
+
+### Creating Training and Test Sets
+
+Next, we'll split the data into training and test sets.
+
+```{r}
+set.seed(123)
+
+train_indices <- sample(1:nrow(penguins), 0.8 * nrow(penguins))
+train_data <- penguins[train_indices, ]
+test_data <- penguins[-train_indices, ]
+```
+
+## Using Scorcher
+
+### Defining the Neural Network
+
+Next, we'll define our neural network using the `torch` package.
+
+```{r}
+# Create the dataloader
+
+x_train <- torch_tensor(as.matrix(train_data[, -1]), dtype = torch_float())
+y_train <- torch_tensor(as.integer(train_data$species), dtype = torch_long())
+
+dl <- create_dataloader(x_train, y_train, batch_size = 32)
+
+# Define the neural network
+
+scorch_model = dl |> 
+  initiate_scorch() |> 
+  scorch_layer(nn_linear(7, 16)) |> 
+  scorch_layer(nn_relu())|>
+  scorch_layer(nn_linear(16, 8)) |> 
+  scorch_layer(nn_relu()) |>
+  scorch_layer(nn_linear(8, 3))
+
+# Compile the neural network
+
+compiled_scorch_model = scorch_model |>
+  compile_scorch()
+```
+
+### Training the Neural Network
+
+We'll train our neural network on the training data.
+
+```{r}
+# Define weights for imbalanced classes
+
+weight <- length(train_data$species) /
+  (3 * torch_stack(lapply(1:3, function(i) sum(train_data$species == i))))
+
+weight <- weight$squeeze()
+
+# Fit the neural network
+
+fitted_scorch_model = compiled_scorch_model |> 
+  fit_scorch(
+    loss = nn_cross_entropy_loss,
+    loss_params = list(weight = weight),
+    num_epochs = 200,
+    verbose = F)
+```
+
+### Evaluating the Model
+
+Finally, we'll evaluate our model on the test data.
+
+```{r}
+
+fitted_scorch_model$eval()
+
+x_test <- torch_tensor(as.matrix(test_data[, -1]), dtype = torch_float())
+y_test <- torch_tensor(as.integer(test_data$species), dtype = torch_long())
+
+output <- fitted_scorch_model(x_test)
+pred <- torch_argmax(output, dim = 2)
+
+accuracy <- sum(pred == y_test)$item() / length(y_test)
+cat(sprintf("Test Accuracy: %.2f%%\n", accuracy * 100))
+
+```
+
+## Conclusion
+
+In this vignette, we demonstrated how to use the `scorcher` package to fit a neural network on the Palmer Penguins dataset. We covered data preprocessing, model definition, training, and evaluation. It is our hope that the `scorcher` package provides an easy-to-use and flexible framework for building and training neural networks with `torch` in R.
+
+For more information on `torch`, visit the [torch documentation](https://torch.mlverse.org/).
+
+## References
+
+**Palmer penguins dataset:**
+
++ Horst AM, Hill AP, Gorman KB (2020). palmerpenguins: Palmer Archipelago (Antarctica) penguin data. R package version 0.1.0. https://allisonhorst.github.io/palmerpenguins/. doi: 10.5281/zenodo.3960218.
+
+**Data originally published in:** 
+
++ Gorman KB, Williams TD, Fraser WR (2014). Ecological sexual dimorphism and environmental variability within a community of Antarctic penguins (genus *Pygoscelis*). PLoS ONE 9(3):e90081.  https://doi.org/10.1371/journal.pone.0090081
+
+
+**Data citations:**
+
+Adélie penguins: 
+
++ Palmer Station Antarctica LTER and K. Gorman, 2020. Structural size measurements and isotopic signatures of foraging among adult male and female Adélie penguins (*Pygoscelis adeliae*) nesting along the Palmer Archipelago near Palmer Station, 2007-2009 ver 5. Environmental Data Initiative. https://doi.org/10.6073/pasta/98b16d7d563f265cb52372c8ca99e60f (Accessed 2020-06-08).
+
+Gentoo penguins:
+
++ Palmer Station Antarctica LTER and K. Gorman, 2020. Structural size measurements and isotopic signatures of foraging among adult male and female Gentoo penguin (*Pygoscelis papua*) nesting along the Palmer Archipelago near Palmer Station, 2007-2009 ver 5. Environmental Data Initiative. https://doi.org/10.6073/pasta/7fca67fb28d56ee2ffa3d9370ebda689 (Accessed 2020-06-08).
+
+Chinstrap penguins: 
+
++ Palmer Station Antarctica LTER and K. Gorman, 2020. Structural size measurements and isotopic signatures of foraging among adult male and female Chinstrap penguin (*Pygoscelis antarcticus*) nesting along the Palmer Archipelago near Palmer Station, 2007-2009 ver 6. Environmental Data Initiative. https://doi.org/10.6073/pasta/c14dfcfada8ea13a17536e73eb6fbe9e (Accessed 2020-06-08).
