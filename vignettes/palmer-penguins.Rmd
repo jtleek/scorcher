@@ -38,16 +38,21 @@ This vignette demonstrates how to use the `scorcher` package to fit a neural net
 Before we begin, ensure that you have the necessary packages installed. You can install them using the following commands:
 
 ```{r install, eval = F}
-install.packages("palmerpenguins")
+install.packages("tidyverse")
+install.packages("ggimage")
 install.packages("torch")
 install.packages("scorcher")
+install.packages("palmerpenguins")
 ```
 
-Additionally, you'll need to install torch dependencies. Follow the instructions provided [here](https://torch.mlverse.org/start/installation/) to install torch. Then, you can load the `scorcher` library with:
+Additionally, you'll need to install torch dependencies. Follow the instructions provided [here](https://torch.mlverse.org/start/installation/) to install torch. Then, you can load the `scorcher` library and the other necessary libraries for this analysis with:
 
 ```{r setup}
+library(tidyverse)
+library(ggimage)
 library(torch)
 library(scorcher)
+library(palmerpenguins)
 ```
 
 ### Loading the Data
@@ -55,7 +60,6 @@ library(scorcher)
 We'll now load the Palmer Penguins dataset.
 
 ```{r}
-library(palmerpenguins)
 data("penguins")
 
 # Removing rows with missing values for simplicity
@@ -134,7 +138,7 @@ test_data <- penguins[-train_indices, ]
 
 ### Defining the Neural Network
 
-Next, we'll define our neural network using the `torch` package.
+Next, we'll define our neural network using the `scorcher` package.
 
 ```{r}
 # Create the dataloader
@@ -146,7 +150,7 @@ dl <- create_dataloader(x_train, y_train, batch_size = 32)
 
 # Define the neural network
 
-scorch_model = dl |> 
+scorch_model <- dl |> 
   initiate_scorch() |> 
   scorch_layer(nn_linear(7, 16)) |> 
   scorch_layer(nn_relu())|>
@@ -156,7 +160,7 @@ scorch_model = dl |>
 
 # Compile the neural network
 
-compiled_scorch_model = scorch_model |>
+compiled_scorch_model <- scorch_model |>
   compile_scorch()
 ```
 
@@ -174,7 +178,7 @@ weight <- weight$squeeze()
 
 # Fit the neural network
 
-fitted_scorch_model = compiled_scorch_model |> 
+fitted_scorch_model <- compiled_scorch_model |> 
   fit_scorch(
     loss = nn_cross_entropy_loss,
     loss_params = list(weight = weight),
