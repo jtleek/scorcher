@@ -39,12 +39,14 @@ Before we begin, ensure that you have the necessary packages installed. You can 
 
 ```{r install, eval = F}
 install.packages("palmerpenguins")
+install.packages("torch")
 install.packages("scorcher")
 ```
 
 Additionally, you'll need to install torch dependencies. Follow the instructions provided [here](https://torch.mlverse.org/start/installation/) to install torch. Then, you can load the `scorcher` library with:
 
 ```{r setup}
+library(torch)
 library(scorcher)
 ```
 
@@ -88,6 +90,7 @@ penguins |>
     ylim(c(10, 22.5)) +
     labs(title = "Bill length and depth",
          subtitle = "Dimensions for Adelie, Chinstrap and Gentoo Penguins at Palmer Station LTER",
+         caption = "Artwork by @allison_horst",
          x = "Bill Length (mm)",
          y = "Bill Depth (mm)",
          color = "Species",
