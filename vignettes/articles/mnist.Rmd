@@ -87,7 +87,7 @@ Next, we'll define our neural network using the `scorcher` package.
 ```{r}
 # Create the dataloader
 
-dl <- create_dataloader(x_train, y_train, batch_size = 500)
+dl <- scorch_create_dataloader(x_train, y_train, batch_size = 500)
 
 # Define the neural network
 

@@ -2,7 +2,7 @@
 % Please edit documentation in R/compile_scorch.R
 \name{compile_scorch}
 \alias{compile_scorch}
-\title{Compile a scorch model}
+\title{Compile a Scorch Model}
 \usage{
 compile_scorch(sm)
 }
@@ -10,19 +10,26 @@ compile_scorch(sm)
 \item{sm}{A scorch model architecture}
 }
 \value{
-A scorch_model object with components (1) nn_module compiled and ready to train and (2) the scorch_dataloader object
+A scorch_model object with components (1) nn_module compiled and
+ready to train and (2) the scorch_dataloader object
 }
 \description{
-Compile a scorch model
+Compile a Scorch Model
 }
 \examples{
 
-input = mtcars |> as.matrix() |> torch::torch_tensor()
-output = mtcars |> as.matrix() |> torch::torch_tensor()
-dl = create_dataloader(input,output,batch_size=2)
-scorch_model = dl |> initiate_scorch() |>
+input  <- mtcars |> as.matrix() |> torch::torch_tensor()
+
+output <- mtcars |> as.matrix() |> torch::torch_tensor()
+
+dl <- scorch_create_dataloader(input, output, batch_size = 2)
+
+scorch_model <- dl |> initiate_scorch() |>
+
   scorch_layer(torch::nn_linear(11,5)) |>
+
   scorch_layer(torch::nn_linear(5,2)) |>
+
   compile_scorch()
 
 }

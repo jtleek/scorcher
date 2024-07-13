@@ -1,3 +1,9 @@
+#===============================================================================
+# SCORCH LAYER
+#===============================================================================
+
+#=== MAIN FUNCTION =============================================================
+
 #' Add a Layer to a Scorch Model
 #'
 #' @description
@@ -19,19 +25,19 @@
 #'
 #' output <- mtcars |> as.matrix() |> torch::torch_tensor()
 #'
-#' dl <- create_dataloader(input, output, batch_size = 2)
+#' dl <- scorch_create_dataloader(input, output, batch_size = 2)
 #'
-#' scorch_model = dl |> initiate_scorch() |>
+#' scorch_model <- dl |> initiate_scorch() |>
 #'
 #'   scorch_layer(torch::nn_linear(11, 5))
 
-scorch_layer = function(scorch_model, nn_obj){
+scorch_layer <- function(scorch_model, nn_obj){
 
-  scorch_model$scorch_architecture = append(
+  scorch_model$scorch_architecture <- append(
 
     scorch_model$scorch_architecture, list(nn_obj, type = "layer"))
 
   scorch_model
 }
 
-
+#=== END =======================================================================

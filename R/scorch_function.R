@@ -1,3 +1,9 @@
+#===============================================================================
+# SCORCH CUSTOM FUNCTIONS
+#===============================================================================
+
+#=== MAIN FUNCTION =============================================================
+
 #' Add a Custom Function to a Scorch Model
 #'
 #' @description
@@ -23,24 +29,26 @@
 #'
 #' output <- mtcars |> as.matrix() |> torch::torch_tensor()
 #'
-#' dl <- create_dataloader(input, output, batch_size = 2)
+#' dl <- scorch_create_dataloader(input, output, batch_size = 2)
 #'
-#' scorch_model = dl |> initiate_scorch() |>
+#' scorch_model <- dl |> initiate_scorch() |>
 #'
 #'   scorch_layer(torch::nn_linear(11, 5)) |>
 #'
 #'   scorch_function(custom_function, factor = 2)
 
-scorch_function = function(scorch_model, func, ...) {
+scorch_function <- function(scorch_model, func, ...) {
 
-  func_call = function(x) {
+  func_call <- function(x) {
 
     return(func(x, ...))
   }
 
-  scorch_model$scorch_architecture = append(scorch_model$scorch_architecture,
+  scorch_model$scorch_architecture <- append(scorch_model$scorch_architecture,
 
     list(func_call, type = "function"))
 
   scorch_model
 }
+
+#=== END =======================================================================

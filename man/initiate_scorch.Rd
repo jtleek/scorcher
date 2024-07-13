@@ -2,26 +2,26 @@
 % Please edit documentation in R/initiate_scorch.R
 \name{initiate_scorch}
 \alias{initiate_scorch}
-\title{Initiate a scorch model}
+\title{Initiate a Scorch Model}
 \usage{
 initiate_scorch(dl)
 }
 \arguments{
-\item{dl}{An input data loader, created with create_dataloader}
+\item{dl}{An input data loader, created with scorch_create_dataloader}
 }
 \value{
 A scorch model object
 }
 \description{
-Initiate a scorch model
+Initiate a Scorch Model
 }
 \examples{
 
-input  = mtcars |> as.matrix() |> torch::torch_tensor()
+input  <- mtcars |> as.matrix() |> torch::torch_tensor()
 
-output = mtcars |> as.matrix() |> torch::torch_tensor()
+output <- mtcars |> as.matrix() |> torch::torch_tensor()
 
-dl = create_dataloader(input, output, batch_size = 2)
+dl <- scorch_create_dataloader(input, output, batch_size = 2)
 
 dl |> initiate_scorch()
 }

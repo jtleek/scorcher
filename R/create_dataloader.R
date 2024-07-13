@@ -30,13 +30,13 @@
 #'
 #' @examples
 #'
-#' input = mtcars  |> as.matrix() |> torch::torch_tensor()
+#' input  <- mtcars |> as.matrix() |> torch::torch_tensor()
 #'
-#' output = mtcars |> as.matrix() |> torch::torch_tensor()
+#' output <- mtcars |> as.matrix() |> torch::torch_tensor()
 #'
-#' dl = create_dataloader(input, output, batch_size = 2)
+#' dl <- scorch_create_dataloader(input, output, batch_size = 2)
 
-create_dataloader = function(input, output,
+scorch_create_dataloader <- function(input, output,
 
   name = "dl", batch_size = 32, shuffle = TRUE){
 
@@ -48,7 +48,7 @@ create_dataloader = function(input, output,
 
   ## Set Up Dataset Creator Function
 
-  create_dataset = torch::dataset(
+  create_dataset <- torch::dataset(
 
     name = name,
 
@@ -76,13 +76,13 @@ create_dataloader = function(input, output,
 
   ## Create Dataset
 
-  ds = create_dataset(input, output, aux)
+  ds <- create_dataset(input, output, aux)
 
   ## Create the Dataloader
 
-  dl = torch::dataloader(ds, batch_size = batch_size, shuffle = shuffle)
+  dl <- torch::dataloader(ds, batch_size = batch_size, shuffle = shuffle)
 
-  dl = create_scorch_dataloader_class(dl)
+  dl <- create_scorch_dataloader_class(dl)
 
   return(dl)
 }
@@ -106,21 +106,21 @@ create_dataloader = function(input, output,
 #'
 #' @examples
 #'
-#' input = mtcars  |> as.matrix() |> torch::torch_tensor()
+#' input  <- mtcars |> as.matrix() |> torch::torch_tensor()
 #'
-#' output = mtcars |> as.matrix() |> torch::torch_tensor()
+#' output <- mtcars |> as.matrix() |> torch::torch_tensor()
 #'
-#' dl = create_dataloader(input, output, batch_size = 2)
+#' dl <- scorch_create_dataloader(input, output, batch_size = 2)
 #'
 #' scorch_dataloader <- create_scorch_dataloader_class(dl)
 #'
 #' class(scorch_dataloader)
 
-create_scorch_dataloader_class = function(dl) {
+create_scorch_dataloader_class <- function(dl) {
 
-  tmp = dl
+  tmp <- dl
 
-  class(tmp) = c("scorch_dataloader", class(dl))
+  class(tmp) <- c("scorch_dataloader", class(dl))
 
   return(tmp)
 }
@@ -141,11 +141,11 @@ create_scorch_dataloader_class = function(dl) {
 #'
 #' @examples
 #'
-#' input = mtcars |> as.matrix() |> torch::torch_tensor()
+#' input <- mtcars |> as.matrix() |> torch::torch_tensor()
 #'
 #' calc_dim(input)
 
-calc_dim = function(tensor) {
+calc_dim <- function(tensor) {
 
   ndim = length(dim(tensor))
 
@@ -162,6 +162,10 @@ calc_dim = function(tensor) {
 #=== METHODS ===================================================================
 
 #--- HEAD ----------------------------------------------------------------------
+
+#' @importFrom utils head
+#' @export
+utils::head
 
 #' Head Method for Scorch Dataloader
 #'
@@ -180,31 +184,27 @@ calc_dim = function(tensor) {
 #'
 #' @examples
 #'
-#' input  = mtcars |> as.matrix() |> torch::torch_tensor()
+#' input  <- mtcars |> as.matrix() |> torch::torch_tensor()
 #'
-#' output = mtcars |> as.matrix() |> torch::torch_tensor()
+#' output <- mtcars |> as.matrix() |> torch::torch_tensor()
 #'
-#' dl = create_dataloader(input,output,batch_size=2)
+#' dl <- scorch_create_dataloader(input,output,batch_size=2)
 #'
 #' head(dl)
 
-head.scorch_dataloader = function(x, ...) {
+head.scorch_dataloader <- function(x, ...) {
 
-  val = x$.iter()$.next()
+  val <- x$.iter()$.next()
 
   return(
 
-    list(input  = head(val$input, ...),
+    list(input  = head(val$input,  ...),
 
          output = head(val$output, ...))
   )
 }
 
 #--- PRINT ---------------------------------------------------------------------
-
-#' @importFrom utils head
-#' @export
-utils::head
 
 #' Print Method for Scorch Dataloader
 #'
@@ -223,15 +223,15 @@ utils::head
 #'
 #' @examples
 #'
-#' input  = mtcars |> as.matrix() |> torch::torch_tensor()
+#' input  <- mtcars |> as.matrix() |> torch::torch_tensor()
 #'
-#' output = mtcars |> as.matrix() |> torch::torch_tensor()
+#' output <- mtcars |> as.matrix() |> torch::torch_tensor()
 #'
-#' dl = create_dataloader(input,output)
+#' dl <- scorch_create_dataloader(input,output)
 #'
 #' print(dl)
 
-print.scorch_dataloader = function(x, ...) {
+print.scorch_dataloader <- function(x, ...) {
 
   cat("This is a dataloader object with features:\n")
 
@@ -257,6 +257,5 @@ print.scorch_dataloader = function(x, ...) {
 
     crayon::red(calc_dim(x$.iter()$.next()$output))))
 }
-
 
 #=== END =======================================================================

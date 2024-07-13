@@ -12,11 +12,16 @@
 \item{...}{Additional arguments to be passed to the print function.}
 }
 \description{
-This function defines the print method for objects of class 'scorch_nn_module'.
+This function defines the print method for objects of class
+'scorch_nn_module'.
 }
 \examples{
+
 model <- list(children = list(modules = "module details"))
+
 model$children$modules <- "modules: 123\nlayer1 #64\nlayer2 #32"
+
 class(model) <- c("scorch_nn_module", class(model))
+
 print(model)
 }

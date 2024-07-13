@@ -18,7 +18,7 @@ Calculates the dimensions of a given tensor, returning a formatted string.
 }
 \examples{
 
-input = mtcars |> as.matrix() |> torch::torch_tensor()
+input <- mtcars |> as.matrix() |> torch::torch_tensor()
 
 calc_dim(input)
 }

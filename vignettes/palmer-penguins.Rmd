@@ -146,7 +146,7 @@ Next, we'll define our neural network using the `scorcher` package.
 x_train <- torch_tensor(as.matrix(train_data[, -1]), dtype = torch_float())
 y_train <- torch_tensor(as.integer(train_data$species), dtype = torch_long())
 
-dl <- create_dataloader(x_train, y_train, batch_size = 32)
+dl <- scorch_create_dataloader(x_train, y_train, batch_size = 32)
 
 # Define the neural network
 

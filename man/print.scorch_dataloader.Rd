@@ -21,11 +21,11 @@ a summary of its features.
 }
 \examples{
 
-input  = mtcars |> as.matrix() |> torch::torch_tensor()
+input  <- mtcars |> as.matrix() |> torch::torch_tensor()
 
-output = mtcars |> as.matrix() |> torch::torch_tensor()
+output <- mtcars |> as.matrix() |> torch::torch_tensor()
 
-dl = create_dataloader(input,output)
+dl <- scorch_create_dataloader(input,output)
 
 print(dl)
 }

@@ -18,5 +18,8 @@ Imports:
 Config/Needs/website: rmarkdown
 Suggests: 
     knitr,
-    rmarkdown
+    rmarkdown,
+    ggimage,
+    palmerpenguins,
+    tidyverse
 VignetteBuilder: knitr

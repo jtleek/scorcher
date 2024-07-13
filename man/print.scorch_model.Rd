@@ -15,13 +15,14 @@
 This function defines the print method for objects of class 'scorch_model'.
 }
 \examples{
-input  = mtcars |> as.matrix() |> torch::torch_tensor()
 
-output = mtcars |> as.matrix() |> torch::torch_tensor()
+input  <- mtcars |> as.matrix() |> torch::torch_tensor()
 
-dl = create_dataloader(input, output, batch_size = 2)
+output <- mtcars |> as.matrix() |> torch::torch_tensor()
 
-scorch_model = dl |> initiate_scorch() |>
+dl <- scorch_create_dataloader(input, output, batch_size = 2)
+
+scorch_model <- dl |> initiate_scorch() |>
 
   scorch_layer(torch::nn_linear(11, 5))
 

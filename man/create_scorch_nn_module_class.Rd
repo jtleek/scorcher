@@ -10,13 +10,18 @@ create_scorch_nn_module_class(obj)
 \item{obj}{An object to be converted to a compiled scorch model.}
 }
 \value{
-The input object with the class attribute set to include 'compiled_scorch_model'.
+The input object with the class attribute set to include
+'compiled_scorch_model'.
 }
 \description{
-This function creates an object of class 'compiled_scorch_model' by appending it to the existing classes of the input object.
+This function creates an object of class 'compiled_scorch_model' by
+appending it to the existing classes of the input object.
 }
 \examples{
+
 model <- list(children = list(modules = "module details"))
+
 compiled_model <- create_scorch_nn_module_class(model)
+
 class(compiled_model)
 }
