@@ -145,7 +145,7 @@ create_scorch_nn_module_class <- function(obj) {
 
 print.scorch_nn_module <- function(x, ...) {
 
-  output <- capture.output(x$children$modules)
+  output <- utils::capture.output(x$children$modules)
 
   n_param <- stringr::str_extract(output[1], "\\d+")
 

@@ -14,7 +14,8 @@ Imports:
     crayon,
     glue,
     stringr,
-    torch
+    torch,
+    utils
 Config/Needs/website: rmarkdown
 Suggests: 
     knitr,
