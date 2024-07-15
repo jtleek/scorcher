@@ -2,7 +2,9 @@
 #'
 #' @description
 #' Automates the process of uploading a scorch model to AWS S3, launching an
-#' EC2 instance to train, and retrieving the results.
+#' EC2 instance to train, and retrieving the results. Includes safeguards
+#' to prevent unexpected costs by requiring double confirmation, limiting file
+#' size, and setting an automatic termination time for the EC2 instance.
 #'
 #' @param scorch_model A scorch model object to be uploaded and trained.
 #'
@@ -43,6 +45,14 @@
 #'
 #' @param ec2_script_path The local path to save the EC2 processing script.
 #' Default is "train_scorch_model.R".
+#'
+#' @param max_file_size_mb The maximum allowed file size for upload in MB.
+#' Default is 100.
+#'
+#' @param max_run_time_minutes The maximum allowed runtime for the EC2 instance
+#' in minutes. Default is 60.
+#'
+#' @param ... Additional arguments passed to `compile_scorch` and `fit_scorch`.
 #'
 #' @return The results of the model fitting as a torch tensor.
 #'
@@ -97,11 +107,43 @@ scorch_to_aws <- function(scorch_model, testing_data, loss = nn_mse_loss,
 
   ec2_key_name, ec2_security_group, ec2_region = "us-east-1",
 
-  ec2_script_path = "train_scorch_model.R") {
+  ec2_script_path = "train_scorch_model.R",
+
+  max_file_size_mb = 100, max_run_time_minutes = 60, ...) {
+
+  ## Double Confirmation before Execution
+
+  cat("WARNING: This operation will incur AWS charges.\n\n",
+      "Please confirm to proceed (Y/N): ")
+
+  response1 <- readline()
+
+  if (tolower(response1) != "y") stop("Operation aborted by the user.")
+
+  cat("Are you sure you want to proceed? This will incur AWS charges (Y/N): ")
+
+  response2 <- readline()
+
+  if (tolower(response2) != "y") stop("Operation aborted by the user.")
 
   ## Save Model Locally
 
   torch::torch_save(scorch_model, 'model.pth')
+
+  ## Check File Size
+
+  model_size_mb <- file.info('model.pth')$size / (1024^2)
+
+  if (model_size_mb > max_file_size_mb) {
+
+    stop(paste("File size exceeds the maximum allowed size of",
+               max_file_size_mb, "MB."))
+  }
+
+  ## Display AWS Billing Dashboard Link
+
+  cat("Check your AWS billing dashboard for real-time monitoring:\n\n",
+      "https://console.aws.amazon.com/billing/home\n")
 
   ## Set AWS Credentials
 
@@ -115,13 +157,29 @@ scorch_to_aws <- function(scorch_model, testing_data, loss = nn_mse_loss,
 
   ## Launch EC2 Instance
 
-  instance_info <- aws.ec2::ec2_run_instances(image_id = ec2_image_id,
+  instance_info <- aws.ec2::run_instances(image_id = ec2_image_id,
 
     instance_type = ec2_instance_type, key_name = ec2_key_name,
 
     security_groups = ec2_security_group, region = ec2_region)
 
   instance_id <- instance_info$instancesSet[[1]]$instanceId
+
+  ## Set a Timer to Automatically Stop EC2 Instance
+
+  cat("EC2 instance will automatically terminate after",
+      max_run_time_minutes, "minutes.\n")
+
+  terminate_ec2 <- function() {
+
+    aws.ec2::terminate_instances(instance_ids = instance_id,
+
+      region = ec2_region)
+
+    cat("EC2 instance terminated.\n")
+  }
+
+  on.exit(terminate_ec2(), add = TRUE)
 
   ## Wait for Instance to Run
 
@@ -140,6 +198,15 @@ scorch_to_aws <- function(scorch_model, testing_data, loss = nn_mse_loss,
   ssh_session <- ssh::ssh_connect(paste0("ec2-user@", public_dns),
 
     keyfile = paste0("~/.ssh/", ec2_key_name, ".pem"))
+
+  ## Schedule EC2 Termination
+
+  shutdown_command <- paste0("sudo shutdown -h +", max_run_time_minutes)
+
+  ssh::ssh_exec_wait(ssh_session, shutdown_command)
+
+  cat("EC2 instance scheduled to terminate after",
+      max_run_time_minutes, "minutes.\n")
 
   ## Create Training Script on Instance
 
@@ -165,13 +232,13 @@ scorch_to_aws <- function(scorch_model, testing_data, loss = nn_mse_loss,
 
   compiled_scorch_model <- scorch_model |>
 
-    compile_scorch()
+    compile_scorch('", ..., "')
 
   fitted_scorch_model <- compiled_scorch_model |>
 
-    fit_scorch(loss = loss, loss_params = loss_params,
+    fit_scorch(loss ='", loss,"', loss_params ='", loss_params,"',
 
-      num_epochs = num_epochs, verbose = F)
+      num_epochs ='", num_epochs, "', verbose = F,'", ..., "')
 
   fitted_scorch_model$eval()
 
@@ -194,13 +261,13 @@ scorch_to_aws <- function(scorch_model, testing_data, loss = nn_mse_loss,
 
   ssh::ssh_exec_wait(ssh_session, "Rscript train_model.R")
 
-  ssh::ssh_disconnect(ssh_session)
-
   ## Download Results from S3
 
   aws.s3::save_object(object = s3_result_key, bucket = s3_bucket,
 
     file = "results.pth")
+
+  ssh::ssh_disconnect(ssh_session)
 
   ## Load Results
 
