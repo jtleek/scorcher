@@ -31,7 +31,7 @@
 #'
 #' @export
 
-compile_scorch <- function(sm) {
+compile_scorch <- function(sm, init_fn = NULL, forward_fn = NULL, ...) {
 
   model <- nn_module(
 
@@ -50,9 +50,19 @@ compile_scorch <- function(sm) {
       self$modules = modules
 
       self$functions = sm$scorch_architecture[func_index]
+
+      if (!is.null(init_fn)) {
+
+        init_fn(self, ...)
+      }
     },
 
-    forward = function(input) {
+    forward = function(input, ...) {
+
+      if (!is.null(forward_fn)) {
+
+        input <- forward_fn(self, input, ...)
+      }
 
       n_layer = length(sm$scorch_architecture) / 2
 
@@ -76,7 +86,7 @@ compile_scorch <- function(sm) {
 
           output = self$functions[[i_function]](output)
 
-          i_function. = i_function + 1
+          i_function = i_function + 1
         }
       }
 

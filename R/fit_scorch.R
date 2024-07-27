@@ -56,7 +56,9 @@ fit_scorch = function(scorch_model,
 
   optim = optim_adam, optim_params = list(lr = 0.001),
 
-  num_epochs = 10, verbose = TRUE){
+  num_epochs = 10, verbose = TRUE, preprocess_fn = NULL,
+
+  clip_grad_norm = F, max_norm = 1, ...) {
 
   loss_fn <- do.call(loss, loss_params)
 
@@ -70,17 +72,49 @@ fit_scorch = function(scorch_model,
 
   for (epoch in 1:num_epochs) {
 
-    total_loss  = 0
+    total_loss = 0
 
     coro::loop(for (batch in scorch_model$dl) {
 
+      if (!is.null(preprocess_fn)) {
+
+        ## preprocess_fun must return a list with at minimum `input` and `output`
+
+        preprocessed <- preprocess_fn(batch, ...)
+
+        for (i in 1:length(preprocessed)) {
+
+          assign(names(preprocessed)[i], preprocessed[[i]])
+        }
+
+      } else {
+
+        input <- batch$input
+
+        output <- batch$output
+      }
+
       optim_fn$zero_grad()
 
-      pred <- scorch_model$nn_model(batch$input)
+      ## Diffusion
 
-      loss <- loss_fn(pred, batch$output)
+      if (exists("timesteps")) {
+
+        pred <- scorch_model$nn_model(input, timesteps)
+
+      } else {
+
+        pred <- scorch_model$nn_model(input)
+      }
+
+      loss <- loss_fn(pred, output)
 
       loss$backward()
+
+      if (clip_grad_norm) {
+
+        nn_utils_clip_grad_norm_(scorch_model$parameters, max_norm)
+      }
 
       optim_fn$step()
 
@@ -90,7 +124,8 @@ fit_scorch = function(scorch_model,
     if(verbose){
 
       cat(glue::glue("Epoch {crayon::red(epoch)}, ",
-                     "Loss: {crayon::red(total_loss/length_dl)} \n\n"))
+
+        "Loss: {crayon::red(total_loss/length_dl)} \n\n"))
     }
   }
 

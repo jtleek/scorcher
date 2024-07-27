@@ -1,0 +1,160 @@
+---
+title: "diffusion"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{diffusion}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(scorcher)
+library(torch)
+library(torchvision)
+library(datasauRus)
+library(coro)
+library(tidyverse)
+```
+
+```{r data}
+
+dino_dataset <- torch::dataset(
+  
+  name = "dino_dataset",
+  
+  initialize = function(n = 8000) {
+    
+    df <- datasaurus_dozen |> 
+      
+      filter(dataset == "dino")
+    
+    set.seed(123)
+    
+    ix <- sample(1:nrow(df), n, replace = T)
+    
+    x <- df$x[ix] + rnorm(n, sd = 0.15)
+    y <- df$y[ix] + rnorm(n, sd = 0.15)
+    
+    x <- (x / 54 - 1) * 4
+    y <- (y / 48 - 1) * 4
+    
+    X <- cbind(x, y)
+    
+    self$data <- torch_tensor(X, dtype = torch_float())
+  },
+  
+  .getitem = function(i) {
+    
+    self$data[i, ]
+  },
+  
+  .length = function() {
+    
+    self$data$size()[[1]]
+  }
+)
+
+```
+
+
+```{r}
+# Create the dataloader
+
+dataset <- dino_dataset()
+
+input <- output <- dataset$data
+
+dl <-scorch_create_dataloader(input, output, batch_size = 32)
+
+# Define the neural network
+
+Block <- nn_module(
+  
+  initialize = function(size) {
+    
+    self$ff <- nn_linear(size, size)
+    
+    self$act <- nn_gelu()
+  },
+  
+  forward = function(x) {
+    
+    x + self$act(self$ff(x))
+  }
+)
+
+scorch_model <- dl |> 
+  initiate_scorch() |> 
+  scorch_layer(nn_linear(128 * 3, 128)) |>
+  scorch_layer(nn_gelu()) |>
+  scorch_layer(Block(128)) |>
+  scorch_layer(Block(128)) |>
+  scorch_layer(Block(128)) |>
+  scorch_layer(nn_linear(128, 2))
+
+# Compile the neural network
+
+compiled_scorch_model <- scorch_model |>
+  compile_scorch(init_fn = scorch_2d_diffusion_init, 
+                 forward_fn = scorch_2d_diffusion_forward, scale = 25)
+
+```
+
+
+```{r fit}
+
+noise_scheduler <- NoiseScheduler$new(
+  num_timesteps = 50L,
+  beta_schedule = "linear"
+)
+
+fitted_scorch_model <- compiled_scorch_model |> 
+  fit_scorch(loss = nn_mse_loss, optim = optim_adamw, 
+             num_epochs = 10, verbose = T,
+             preprocess_fn = scorch_2d_diffusion_train, clip_grad_norm = T, 
+             noise_scheduler = noise_scheduler)
+```
+
+```{r}
+
+fitted_scorch_model$eval()
+
+sample <- torch_randn(1000L, 2)
+    
+timesteps <- rev(seq_len(length(noise_scheduler)))
+      
+for (t in timesteps) {
+      
+  t_tensor <- torch_tensor(rep(t, 1000L), dtype = torch_long())
+      
+  with_no_grad({
+        
+    residual <- fitted_scorch_model(sample, t_tensor)
+  })
+      
+  sample <- noise_scheduler$step(residual, t, sample)
+}
+      
+frame <- as_array(sample)
+
+xmin <- -6
+xmax <- 6
+ymin <- -6
+ymax <- 6
+
+ggplot() +
+    geom_point(aes(x = frame[, 1], y = frame[, 2])) +
+    xlim(xmin, xmax) +
+    ylim(ymin, ymax) +
+    theme_void()
+
+```
+
+
