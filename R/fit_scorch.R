@@ -8,19 +8,36 @@
 #'
 #' @param scorch_model A scorch model object
 #'
-#' @param loss A loss function from the torch package
+#' @param loss A loss function from the torch package.
+#' Default is `nn_mse_loss`.
 #'
-#' @param loss_params Parameters to pass to the loss function
+#' @param loss_params A list of parameters to pass to the loss function.
+#' Default is `list(reduction = "mean")`.
 #'
-#' @param optim An optimizer from the torch package
+#' @param optim An optimizer from the torch package.
+#' Default is `optim_adam`.
 #'
-#' @param optim_params Parameters to pass to the optimizer
+#' @param optim_params A list of parameters to pass to the optimizer.
+#' Default is `list(lr = 0.001)`.
 #'
-#' @param num_epochs The number of epochs to train for
+#' @param num_epochs The number of epochs to train for. Default is 10.
 #'
-#' @param verbose Whether to print loss results at each epoch
+#' @param verbose A logical value indicating whether to print loss results at
+#' each epoch. Default is TRUE.
 #'
-#' @return A trained nn_module
+#' @param preprocess_fn An optional function with additional, context specific
+#' steps to preprocess batches of data before training. The function must
+#' return a list containing at least `input` and `output`.
+#'
+#' @param clip_grad_norm A logical value indicating whether to clip gradient
+#' norms. Default is FALSE.
+#'
+#' @param max_norm The maximum norm value for gradient clipping. Only used if
+#' clip_grad_norm is TRUE. Default is 1.
+#'
+#' @param ... Additional arguments passed to the `preprocess_fn`.
+#'
+#' @return A trained scorch model.
 #'
 #' @export
 #'
@@ -77,8 +94,6 @@ fit_scorch = function(scorch_model,
     coro::loop(for (batch in scorch_model$dl) {
 
       if (!is.null(preprocess_fn)) {
-
-        ## preprocess_fun must return a list with at minimum `input` and `output`
 
         preprocessed <- preprocess_fn(batch, ...)
 

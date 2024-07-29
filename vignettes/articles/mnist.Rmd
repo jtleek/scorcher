@@ -19,7 +19,7 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-This vignette demonstrates how to use the `scorcher` package to fit a neural network using the [MNIST](https://github.com/mlverse/torchvision/blob/main/R/dataset-mnist.R) dataset, which consists of handwritten digits from 0 to 9. The MNIST dataset included in the [torchvision](https://torchvision.mlverse.org/) package contains 70,000 grayscale images of handwritten digits, each 28x28 pixels in size. It is divided into 60,000 training images and 10,000 testing images. The goal is to classify these images into one of the 10 digit categories (0-9). In this vignette, we will preprocess the data, create a neural network model, and evaluate its performance.
+This vignette demonstrates how to use the `scorcher` package to fit a convolutional neural network using the [MNIST](https://github.com/mlverse/torchvision/blob/main/R/dataset-mnist.R) dataset, which consists of handwritten digits from 0 to 9. The MNIST dataset included in the [torchvision](https://torchvision.mlverse.org/) package contains 70,000 grayscale images of handwritten digits, each 28x28 pixels in size. It is divided into 60,000 training images and 10,000 testing images. The goal is to classify these images into one of the 10 digit categories (0-9). In this vignette, we will preprocess the data, create a neural network model, and evaluate its performance.
 
 <br>
 
