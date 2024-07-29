@@ -6,6 +6,26 @@
 
 #--- SINUSOIDAL ----------------------------------------------------------------
 
+#' Sinusoidal Positional Embedding
+#'
+#' The `SinusoidalEmbedding` module implements sinusoidal positional embeddings.
+#' It scales the input and applies sine and cosine functions to create
+#' embeddings.
+#'
+#' @param size The dimension of the embedding.
+#'
+#' @param scale A scaling factor applied to the input before creating the
+#' embedding. Default is 1.0.
+#'
+#' @return A `SinusoidalEmbedding` object.
+#'
+#' @examples
+#' x <- torch::torch_tensor(1:10)
+#' emb <- SinusoidalEmbedding(8)
+#' emb(x)
+#'
+#' @export
+#'
 SinusoidalEmbedding <- nn_module(
 
   initialize = function(size, scale = 1.0) {
@@ -35,6 +55,24 @@ SinusoidalEmbedding <- nn_module(
 
 #--- LINEAR --------------------------------------------------------------------
 
+#' Linear Positional Embedding
+#'
+#' The `LinearEmbedding` module implements a simple linear positional embedding,
+#' which scales the input and adds a dimension for the embedding.
+#'
+#' @param size The dimension of the embedding.
+#'
+#' @param scale A scaling factor applied to the input. Default is 1.0.
+#'
+#' @return A `LinearEmbedding` object.
+#'
+#' @examples
+#' x <- torch::torch_tensor(1:10)
+#' emb <- LinearEmbedding(8)
+#' emb(x)
+#'
+#' @export
+
 LinearEmbedding <- nn_module(
 
   initialize = function(size, scale = 1.0) {
@@ -54,6 +92,23 @@ LinearEmbedding <- nn_module(
 
 #--- LEARNABLE -----------------------------------------------------------------
 
+#' Learnable Positional Embedding
+#'
+#' The `LearnableEmbedding` module provides a learnable linear layer to generate
+#' positional embeddings, which allows the model to learn the best embedding
+#' values during training.
+#'
+#' @param size The dimension of the embedding.
+#'
+#' @return A `LearnableEmbedding` object.
+#'
+#' @examples
+#' x <- torch::torch_tensor(1:10)
+#' emb <- LearnableEmbedding(8)
+#' emb(x)
+#'
+#' @export
+
 LearnableEmbedding <- nn_module(
 
   initialize = function(size) {
@@ -71,6 +126,20 @@ LearnableEmbedding <- nn_module(
 
 #--- IDENTITY ------------------------------------------------------------------
 
+#' Identity Positional Embedding
+#'
+#' The `IdentityEmbedding` module applies an identity transformation,
+#' effectively passing the input through without modification.
+#'
+#' @return An `IdentityEmbedding` object.
+#'
+#' @examples
+#' x <- torch::torch_tensor(1:10)
+#' emb <- IdentityEmbedding()
+#' emb(x)
+#'
+#' @export
+
 IdentityEmbedding <- nn_module(
 
   initialize = function() {},
@@ -83,6 +152,20 @@ IdentityEmbedding <- nn_module(
 
 #--- ZERO ----------------------------------------------------------------------
 
+#' Zero Positional Embedding
+#'
+#' The `ZeroEmbedding` module generates a zero-valued embedding of the same
+#' size as the input, essentially nullifying the input data.
+#'
+#' @return A `ZeroEmbedding` object.
+#'
+#' @examples
+#' x <- torch::torch_tensor(1:10)
+#' emb <- ZeroEmbedding()
+#' emb(x)
+#'
+#' @export
+
 ZeroEmbedding <- nn_module(
 
   initialize = function() {},
@@ -94,6 +177,29 @@ ZeroEmbedding <- nn_module(
 )
 
 #--- WRAPPER -------------------------------------------------------------------
+
+#' Positional Embedding Wrapper
+#'
+#' The `PositionalEmbedding` module is a wrapper that selects the appropriate
+#' type of positional embedding based on the specified type.
+#'
+#' @param size The dimension of the embedding.
+#'
+#' @param type The type of embedding to use, such as "sinusoidal", "linear",
+#' "learnable", "zero", or "identity".
+#'
+#' @param ... Additional parameters specific to the chosen embedding type.
+#'
+#' @return A `PositionalEmbedding` object.
+#'
+#' @examples
+#' x <- torch::torch_tensor(1:10)
+#' emb <- PositionalEmbedding(8, "sinusoidal")
+#' emb(x)
+#'
+#' @references <https://github.com/tanelp/tiny-diffusion>
+#'
+#' @export
 
 PositionalEmbedding <- nn_module(
 

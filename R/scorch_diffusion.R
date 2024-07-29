@@ -6,6 +6,32 @@
 
 #--- NOISE SCHEDULER -----------------------------------------------------------
 
+#' Noise Scheduler for Diffusion Process
+#'
+#' The `NoiseScheduler` module handles the scheduling of noise addition in the
+#' diffusion process. It supports linear and quadratic beta schedules and
+#' provides methods for reconstructing the original signal, computing posterior
+#' means, and adding noise to samples.
+#'
+#' @param num_timesteps The number of timesteps in the diffusion process.
+#' Default is 1000.
+#'
+#' @param beta_start The starting value of beta for the noise schedul.
+#' Default is 0.0001.
+#'
+#' @param beta_end The ending value of beta for the noise schedule.
+#' Default is 0.02.
+#'
+#' @param beta_schedule The schedule type for beta values, either "linear" or
+#' "quadratic". Default is "linear".
+#'
+#' @return A `NoiseScheduler` object with methods for managing the diffusion
+#' process.
+#'
+#' @references <https://github.com/tanelp/tiny-diffusion>
+#'
+#' @export
+
 NoiseScheduler <- nn_module(
 
   initialize = function(num_timesteps = 1000,
@@ -136,15 +162,61 @@ NoiseScheduler <- nn_module(
 
 #--- INPUT PREPROCESSING FOR COMPILE STEP --------------------------------------
 
+#' Helper to Initialize Scorch 2D Diffusion Model
+#'
+#' The `scorch_2d_diffusion_init` function can be passed to `compile_scorch`
+#' and provides additional functionality for initializing a Scorch 2D diffusion
+#' model by setting up positional embeddings for the input and time steps.
+#'
+#' @param model The Scorch model to initialize.
+#'
+#' @param emb_size The size of the embeddings. Default is 128.
+#'
+#' @param time_emb The type of embedding for time steps, options include
+#' "sinusoidal", "linear", "learnable", "zero", and "identity".
+#' Default is "sinusoidal".
+#'
+#' @param input_emb The type of embedding for inputs, options include
+#' "sinusoidal", "linear", "learnable", "zero", and "identity".
+#' Default is "sinusoidal".
+#'
+#' @param scale The scaling factor for input embeddings. Default is 1.0.
+#'
+#' @return None. The function modifies the `model` in place.
+#'
+#' @export
 
-scorch_2d_diffusion_init <- function(model, emb_size = 128, time_emb = "sinusoidal", input_emb = "sinusoidal", scale = 25) {
+scorch_2d_diffusion_init <- function(model, emb_size = 128,
+
+  time_emb = "sinusoidal", input_emb = "sinusoidal", scale = 1) {
 
   model$self$time_mlp <- PositionalEmbedding(emb_size, type = time_emb)
 
-  model$self$input_mlp1 <- PositionalEmbedding(emb_size, type = input_emb, scale = scale)
+  model$self$input_mlp1 <- PositionalEmbedding(emb_size, type = input_emb,
 
-  model$self$input_mlp2 <- PositionalEmbedding(emb_size, type = input_emb, scale = scale)
+    scale = scale)
+
+  model$self$input_mlp2 <- PositionalEmbedding(emb_size, type = input_emb,
+
+    scale = scale)
 }
+
+#' Helper for Forward Pass for Scorch 2D Diffusion Model
+#'
+#' The `scorch_2d_diffusion_forward` function defines the additional steps for
+#' the forward pass of the Scorch 2D diffusion model. It processes the input
+#' data and time step into embeddings and concatenates them for further
+#' processing in the model.
+#'
+#' @param model The Scorch model being used.
+#'
+#' @param input The input data, expected to be a tensor with two dimensions.
+#'
+#' @param timestep The current timestep in the diffusion process.
+#'
+#' @return The processed input tensor after embedding and concatenation.
+#'
+#' @export
 
 scorch_2d_diffusion_forward <- function(model, input, timestep) {
 
@@ -160,6 +232,23 @@ scorch_2d_diffusion_forward <- function(model, input, timestep) {
 }
 
 #--- BATCH PREPROCESSING FOR TRAINING STEP -------------------------------------
+
+#' Helper for Batch Preprocessing for Training in Scorch 2D Diffusion Model
+#'
+#' The `scorch_2d_diffusion_train` function prepares a batch of data for
+#' training by adding noise to the inputs according to the current timestep and
+#' generating the corresponding noisy outputs.
+#'
+#' @param batch A batch of data containing inputs.
+#'
+#' @param noise_scheduler The `NoiseScheduler` object used for adding noise.
+#'
+#' @param ... Additional arguments for customization.
+#'
+#' @return A list containing the noisy inputs, the noise added, and the
+#' timesteps used.
+#'
+#' @export
 
 scorch_2d_diffusion_train <- function(batch, noise_scheduler, ...) {
 

@@ -8,8 +8,20 @@
 #'
 #' @param sm A scorch model architecture
 #'
-#' @return A scorch_model object with components (1) nn_module compiled and
-#' ready to train and (2) the scorch_dataloader object
+#' @param init_fn An optional function for initializing the model's parameters.
+#' This function takes the model and additional arguments passed via `...`.
+#'
+#' @param forward_fn An optional function for customizing the forward pass of
+#' the model. This function takes the model, input data, and additional
+#' arguments passed via `...`.
+#'
+#' @param ... Additional arguments passed to the `init_fn` and `forward_fn`.
+#'
+#' @return A list containing:
+#' \describe{
+#'   \item{nn_model}{The compiled `scorch` model object, ready for training.}
+#'   \item{dl}{The associated scorch dataloader object.}
+#' }
 #'
 #' @import torch
 #'
