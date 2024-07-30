@@ -56,7 +56,22 @@ fit_scorch = function(scorch_model,
 
   optim = optim_adam, optim_params = list(lr = 0.001),
 
-  num_epochs = 10, verbose = TRUE){
+  num_epochs = 10, verbose = TRUE) {
+
+  # Check if CUDA is available
+
+  device <- if (torch::cuda_is_available()) {
+
+    torch_device("cuda")
+
+  } else {
+
+    torch_device("cpu")
+  }
+
+  # Move model to the appropriate device
+
+  scorch_model$nn_model$to(device)
 
   loss_fn <- do.call(loss, loss_params)
 
