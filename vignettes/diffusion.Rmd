@@ -78,46 +78,21 @@ We start by loading and preprocession the Datasaurus Dozen dataset.
 
 data("datasaurus_dozen")
 
-# Filter for a specific dataset (i.e., "dino")
+# Filter for a specific dataset (i.e., "dino"), sample points, noise, and scale
 
-dino_data <- datasaurus_dozen |> filter(dataset == "dino")
+nobs <- 8000
 
-# Standardize the data and create a torch dataset
+set.seed(123)
 
-dino_dataset <- torch::dataset(
+dino_data <- datasaurus_dozen |> 
   
-  name = "dino_dataset",
-  
-  initialize = function(n = 8000) {
-    
-    df <- dino_data 
-    
-    set.seed(123)
-    
-    ix <- sample(1:nrow(df), n, replace = T)
-    
-    x <- df$x[ix] + rnorm(n, sd = 0.15)
-    y <- df$y[ix] + rnorm(n, sd = 0.15)
-    
-    x <- (x / 54 - 1) * 4
-    y <- (y / 48 - 1) * 4
-    
-    X <- cbind(x, y)
-    
-    self$data <- torch_tensor(X, dtype = torch_float())
-  },
-  
-  .getitem = function(i) {
-    
-    self$data[i, ]
-  },
-  
-  .length = function() {
-    
-    self$data$size()[[1]]
-  }
-)
-
+  filter(dataset == "dino") |>
+  select(-dataset) |>
+  sample_n(nobs, replace = T) |>
+  mutate(
+    x = ((x + rnorm(nobs, sd = 0.15)) / 54 - 1) * 4,
+    x = ((y + rnorm(nobs, sd = 0.15)) / 48 - 1) * 4) |>
+  as.matrix()
 ```
 
 ## Visualizing the Data
@@ -145,37 +120,28 @@ Next, we'll define our 2D probabilistic diffusion model using the `scorcher` pac
 ```{r}
 # Create the dataloader
 
-dataset <- dino_dataset()
-
-input <- output <- dataset$data
+input <- output <- torch_tensor(dino_data, dtype = torch_float())
 
 dl <-scorch_create_dataloader(input, output, batch_size = 32)
 
 # Define the neural network
 
-Block <- nn_module(
-  
-  initialize = function(size) {
+block_layer <- function(x, size) {
     
-    self$ff <- nn_linear(size, size)
-    
-    self$act <- nn_gelu()
-  },
-  
-  forward = function(x) {
-    
-    x + self$act(self$ff(x))
-  }
-)
+    linear <- nn_linear(size, size)
+    gelu <- nn_gelu()
+
+    x + gelu(linear(x))
+}
 
 scorch_model <- dl |> 
   initiate_scorch() |> 
-  scorch_layer(nn_linear(128 * 3, 128)) |>
-  scorch_layer(nn_gelu()) |>
-  scorch_layer(Block(128)) |>
-  scorch_layer(Block(128)) |>
-  scorch_layer(Block(128)) |>
-  scorch_layer(nn_linear(128, 2))
+  scorch_layer("linear", 128 * 3, 128) |>
+  scorch_layer("gelu") |>
+  scorch_function(block_layer, size = 128) |>
+  scorch_function(block_layer, size = 128) |>
+  scorch_function(block_layer, size = 128) |>
+  scorch_layer("linear", 128, 2)
 
 ```
 
