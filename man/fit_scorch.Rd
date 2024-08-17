@@ -11,26 +11,47 @@ fit_scorch(
   optim = optim_adam,
   optim_params = list(lr = 0.001),
   num_epochs = 10,
-  verbose = TRUE
+  verbose = TRUE,
+  preprocess_fn = NULL,
+  clip_grad_norm = F,
+  max_norm = 1,
+  ...
 )
 }
 \arguments{
 \item{scorch_model}{A scorch model object}
 
-\item{loss}{A loss function from the torch package}
+\item{loss}{A loss function from the torch package.
+Default is \code{nn_mse_loss}.}
 
-\item{loss_params}{Parameters to pass to the loss function}
+\item{loss_params}{A list of parameters to pass to the loss function.
+Default is \code{list(reduction = "mean")}.}
 
-\item{optim}{An optimizer from the torch package}
+\item{optim}{An optimizer from the torch package.
+Default is \code{optim_adam}.}
 
-\item{optim_params}{Parameters to pass to the optimizer}
+\item{optim_params}{A list of parameters to pass to the optimizer.
+Default is \code{list(lr = 0.001)}.}
 
-\item{num_epochs}{The number of epochs to train for}
+\item{num_epochs}{The number of epochs to train for. Default is 10.}
 
-\item{verbose}{Whether to print loss results at each epoch}
+\item{verbose}{A logical value indicating whether to print loss results at
+each epoch. Default is TRUE.}
+
+\item{preprocess_fn}{An optional function with additional, context specific
+steps to preprocess batches of data before training. The function must
+return a list containing at least \code{input} and \code{output}.}
+
+\item{clip_grad_norm}{A logical value indicating whether to clip gradient
+norms. Default is FALSE.}
+
+\item{max_norm}{The maximum norm value for gradient clipping. Only used if
+clip_grad_norm is TRUE. Default is 1.}
+
+\item{...}{Additional arguments passed to the \code{preprocess_fn}.}
 }
 \value{
-A trained nn_module
+A trained scorch model.
 }
 \description{
 Fit a Scorch Model
@@ -41,17 +62,13 @@ input  <- mtcars |> as.matrix() |> torch::torch_tensor()
 
 output <- mtcars |> as.matrix() |> torch::torch_tensor()
 
-dl <- scorch_create_dataloader(input,output,batch_size=2)
+dl <- scorch_create_dataloader(input, output, batch_size = 2)
 
 scorch_model <- dl |> initiate_scorch() |>
 
-  scorch_layer(torch::nn_linear(11,5)) |>
+  scorch_layer("linear", 11, 5) |>
 
-  scorch_layer(torch::nn_linear(5,2)) |>
-
-  scorch_layer(torch::nn_linear(2,5)) |>
-
-  scorch_layer(torch::nn_linear(5,11)) |>
+  scorch_layer("linear", 5, 2) |>
 
   compile_scorch() |>
 

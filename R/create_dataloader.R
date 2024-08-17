@@ -188,7 +188,7 @@ utils::head
 #'
 #' output <- mtcars |> as.matrix() |> torch::torch_tensor()
 #'
-#' dl <- scorch_create_dataloader(input,output,batch_size=2)
+#' dl <- scorch_create_dataloader(input, output, batch_size = 2)
 #'
 #' head(dl)
 
@@ -227,7 +227,7 @@ head.scorch_dataloader <- function(x, ...) {
 #'
 #' output <- mtcars |> as.matrix() |> torch::torch_tensor()
 #'
-#' dl <- scorch_create_dataloader(input,output)
+#' dl <- scorch_create_dataloader(input, output)
 #'
 #' print(dl)
 

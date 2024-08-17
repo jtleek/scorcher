@@ -29,7 +29,7 @@
 #'
 #' scorch_model <- dl |> initiate_scorch() |>
 #'
-#'   scorch_layer(torch::nn_linear(11, 5))
+#'   scorch_layer("linear", 11, 5)
 
 scorch_layer <- function(scorch_model, nn_obj){
 
