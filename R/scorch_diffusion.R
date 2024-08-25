@@ -249,11 +249,7 @@ scorch_2d_diffusion_forward <- function(model, input, timestep) {
 #' timesteps used.
 #'
 #' @export
-<<<<<<< HEAD
 
-=======
-#'
->>>>>>> cab224035fe05fb29638a3e42c98101b9e3c5367
 scorch_2d_diffusion_train <- function(batch, noise_scheduler, ...) {
 
   noise <- torch_randn(batch$input$shape)

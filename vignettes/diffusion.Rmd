@@ -114,7 +114,7 @@ ggplot(dino_data, aes(x = x, y = y)) +
 
 ### Defining the Neural Network
 
-Next, we'll define our 2D probabilistic diffusion model using the `scorcher` package. As before, we start by creating the dataloader using the `scorch_create_dataloader` function and defining the neural network architecture using the `initiate_scorch` and `scorch_layer` functions. For the purposes of this example, we also define a multi-layer perceptron (MLP) block consisting of linear and Gaussian error linear unit (GeLU) activations. Note that for our input layer, we set the number of nodes to be three times our chosen number of nodes, as we will be concatenating a positional embedding for the two dimensions of the data and one for the timesteps. Our output layer has two nodes, one for each output data dimension. We have three hidden MLP blocks, each with 128 nodes.
+Next, we'll define our 2D probabilistic diffusion model using the `scorcher` package. As before, we start by creating the dataloader using the `scorch_create_dataloader` function and defining the neural network architecture using the `initiate_scorch` and `scorch_layer` functions. For the purposes of this example, we also add a residual connection block with linear and Gaussian error linear unit (GeLU) activations. Note that for our input layer, we set the number of nodes to be three times our chosen number of nodes, as we will be concatenating a positional embedding for the two dimensions of the data and one for the timesteps. Our output layer has two nodes, one for each output data dimension. We have three hidden MLP blocks, each with 128 nodes.
 
 
 ```{r}
@@ -126,21 +126,14 @@ dl <-scorch_create_dataloader(input, output, batch_size = 32)
 
 # Define the neural network
 
-block_layer <- function(x, size) {
-    
-    linear <- nn_linear(size, size)
-    gelu <- nn_gelu()
-
-    x + gelu(linear(x))
-}
-
 scorch_model <- dl |> 
   initiate_scorch() |> 
   scorch_layer("linear", 128 * 3, 128) |>
   scorch_layer("gelu") |>
-  scorch_function(block_layer, size = 128) |>
-  scorch_function(block_layer, size = 128) |>
-  scorch_function(block_layer, size = 128) |>
+  scorch_layer(c("linear", "gelu"), 128, 128, use_residual = TRUE) |>
+  scorch_layer(c("linear", "gelu"), 128, 128, use_residual = TRUE) |>
+  scorch_layer(c("linear", "gelu"), 128, 128, use_residual = TRUE) |>
+  scorch_layer(c("linear", "gelu"), 128, 128, use_residual = TRUE) |>
   scorch_layer("linear", 128, 2)
 
 ```
