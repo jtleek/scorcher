@@ -173,40 +173,6 @@ scorch_layer <- function(scorch_model, layer_type,
     }
   }
 
-  # # Combine layers into a sequential block
-  #
-  # combined_layers <- do.call(nn_sequential, layers)
-  #
-  # # If residual is used, wrap in a residual block
-  #
-  # if (use_residual) {
-  #
-  #   residual_block <- nn_module(
-  #
-  #     initialize = function() {
-  #
-  #       self$combined_layers <- combined_layers
-  #     },
-  #
-  #     forward = function(x) {
-  #       x + self$combined_layers(x)
-  #     }
-  #   )
-  #
-  #   nn_obj <- residual_block()
-  #
-  # } else {
-  #
-  #   nn_obj <- combined_layers
-  # }
-  #
-  # # Append to the scorch_model architecture
-  #
-  # scorch_model$scorch_architecture <- append(
-  #
-  #   scorch_model$scorch_architecture, list(nn_obj, type = "layer")
-  # )
-
   scorch_model
 }
 

@@ -60,6 +60,8 @@ x <- dat[, c("hp", "wt")] |>
   torch_tensor(dtype = torch_float())
 
 y <- torch_tensor(mtcars$mpg, dtype = torch_float())
+
+y <- y$unsqueeze(2)
 ```
 
 ## Building a Simple Neural Network
@@ -138,7 +140,7 @@ fitted_scorch_model <- scorch_model |>
   
   compile_scorch() |> 
   
-  fit_scorch(num_epochs = 50, verbose = FALSE)
+  fit_scorch(num_epochs = 300, verbose = FALSE)
 
 ```
 

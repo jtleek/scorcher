@@ -91,7 +91,7 @@ dino_data <- datasaurus_dozen |>
   sample_n(nobs, replace = T) |>
   mutate(
     x = ((x + rnorm(nobs, sd = 0.15)) / 54 - 1) * 4,
-    x = ((y + rnorm(nobs, sd = 0.15)) / 48 - 1) * 4) |>
+    y = ((y + rnorm(nobs, sd = 0.15)) / 48 - 1) * 4) |>
   as.matrix()
 ```
 
@@ -102,11 +102,13 @@ Let's visualize the 'dino' data.
 ```{r}
 # Visualize the dino dataset
 
-ggplot(dino_data, aes(x = x, y = y)) +
-  theme_bw() +
-  geom_point() +
-  labs(title = "Datasaurus Dozen - Dino Dataset",
-       x = "X-Coordinates", y = "Y-Coordinates")
+datasaurus_dozen |>
+  filter(dataset == "dino") |>
+  ggplot(aes(x = x, y = y)) +
+    theme_bw() +
+    geom_point() +
+    labs(title = "Datasaurus Dozen - Dino Dataset",
+         x = "X-Coordinates", y = "Y-Coordinates")
 ```
 
 
