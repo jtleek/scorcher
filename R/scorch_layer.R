@@ -148,8 +148,6 @@ scorch_layer <- function(scorch_model, layer_type,
         x_residual <- self$block(x)
 
         x + x_residual
-
-        # x + self$block(x)
       }
     )
 
