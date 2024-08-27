@@ -29,11 +29,12 @@
 #' steps to preprocess batches of data before training. The function must
 #' return a list containing at least `input` and `output`.
 #'
-#' @param clip_grad_norm A logical value indicating whether to clip gradient
-#' norms. Default is FALSE.
+#' @param clip_grad A character string specifying the gradient clipping
+#' strategy. Options are `"norm"` or `"value"`. Defaults to NULL (no clipping).
 #'
-#' @param max_norm The maximum norm value for gradient clipping. Only used if
-#' clip_grad_norm is TRUE. Default is 1.
+#' @param clip_params A list of parameters for gradient clipping.
+#'  - For `"norm"`: should include `max_norm` (a numeric value).
+#'  - For `"value"`: should include `clip_value` (a numeric value).
 #'
 #' @param ... Additional arguments passed to the `preprocess_fn`.
 #'
@@ -51,13 +52,13 @@
 #'
 #' scorch_model <- dl |> initiate_scorch() |>
 #'
-#'   scorch_layer(torch::nn_linear(11,5)) |>
+#'   scorch_layer("linear", 11, 5) |>
 #'
-#'   scorch_layer(torch::nn_linear(5,2)) |>
+#'   scorch_layer("linear", 5, 2) |>
 #'
-#'   scorch_layer(torch::nn_linear(2,5)) |>
+#'   scorch_layer("linear", 2, 5) |>
 #'
-#'   scorch_layer(torch::nn_linear(5,11)) |>
+#'   scorch_layer("linear", 5, 11) |>
 #'
 #'   compile_scorch() |>
 #'
@@ -67,7 +68,7 @@
 #'
 #' test_output <- scorch_model(first_batch$input)
 
-fit_scorch = function(scorch_model,
+fit_scorch <- function(scorch_model,
 
   loss = nn_mse_loss, loss_params = list(reduction = "mean"),
 
@@ -75,7 +76,7 @@ fit_scorch = function(scorch_model,
 
   num_epochs = 10, verbose = TRUE, preprocess_fn = NULL,
 
-  clip_grad_norm = F, max_norm = 1, ...) {
+  clip_grad = NULL, clip_params = list(), ...) {
 
   loss_fn <- do.call(loss, loss_params)
 
@@ -97,38 +98,43 @@ fit_scorch = function(scorch_model,
 
         preprocessed <- preprocess_fn(batch, ...)
 
-        for (i in 1:length(preprocessed)) {
+        inputs <- preprocessed[!names(preprocessed) %in% "output"]
 
-          assign(names(preprocessed)[i], preprocessed[[i]])
-        }
+        output <- preprocessed$output
 
       } else {
 
-        input <- batch$input
+        inputs <- list(input = batch$input)
 
         output <- batch$output
       }
 
       optim_fn$zero_grad()
 
-      ## Diffusion
-
-      if (exists("timesteps")) {
-
-        pred <- scorch_model$nn_model(input, timesteps)
-
-      } else {
-
-        pred <- scorch_model$nn_model(input)
-      }
+      pred <- do.call(scorch_model$nn_model, c(inputs, list()))
 
       loss <- loss_fn(pred, output)
 
       loss$backward()
 
-      if (clip_grad_norm) {
+      if (!is.null(clip_grad)) {
 
-        nn_utils_clip_grad_norm_(scorch_model$parameters, max_norm)
+        if (clip_grad == "norm") {
+
+          nn_utils_clip_grad_norm_(
+
+            scorch_model$nn_model$parameters, clip_params$max_norm)
+
+        } else if (clip_grad == "value") {
+
+          nn_utils_clip_grad_value_(
+
+            scorch_model$nn_model$parameters, clip_params$clip_value)
+
+        } else {
+
+          stop("Unsupported gradient clipping strategy. Use 'norm' or 'value'.")
+        }
       }
 
       optim_fn$step()

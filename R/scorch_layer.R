@@ -71,11 +71,11 @@
 #'
 #' scorch_model <- dl |> initiate_scorch() |>
 #'
-#'   scorch_layer(layer_type = "conv2d", in_features = 16, out_features = 32)
+#'   scorch_layer(layer_type = "linear", 16, 32)
 #'
 #' scorch_model <- scorch_model |>
 #'
-#'   scorch_layer(layer_type = c("conv2d", "gelu", "linear", "relu"),
+#'   scorch_layer(layer_type = c("linear", "relu"),
 #'
 #'    in_features = 16, out_features = 32, use_residual = TRUE)
 #'

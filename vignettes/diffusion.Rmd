@@ -58,6 +58,7 @@ Before we begin, ensure that you have the necessary packages installed. You can 
 ```{r install, eval = F}
 install.packages("tidyverse")
 install.packages("datasauRus")
+install.packages("torch")
 install.packages("scorcher")
 ```
 
@@ -66,6 +67,7 @@ Additionally, you'll need to install torch dependencies. Follow the instructions
 ```{r setup}
 library(tidyverse)
 library(datasauRus)
+library(torch)
 library(scorcher)
 ```
 
@@ -148,8 +150,10 @@ Similarly, the `forward_fn` argument takes a function that modifies the underlyi
 # Compile the neural network
 
 compiled_scorch_model <- scorch_model |>
+  
   compile_scorch(init_fn = scorch_2d_diffusion_init, 
-                 forward_fn = scorch_2d_diffusion_forward, scale = 25)
+    
+    forward_fn = scorch_2d_diffusion_forward, scale = 25)
 
 ```
 
@@ -174,10 +178,14 @@ We will then fit our simple diffusion model using `fit_scorch`. This model will 
 # Train the model
 
 fitted_scorch_model <- compiled_scorch_model |> 
-  fit_scorch(loss = nn_mse_loss, optim = optim_adamw, 
-             num_epochs = 50, verbose = F,
-             preprocess_fn = scorch_2d_diffusion_train, clip_grad_norm = T, 
-             noise_scheduler = noise_scheduler)
+  
+  fit_scorch(loss = nn_mse_loss, optim = optim_adamw, num_epochs = 1,            # 50
+             
+    verbose = F, preprocess_fn = scorch_2d_diffusion_train, 
+    
+    clip_grad = "norm", clip_params = list(max_norm = 1),
+    
+    noise_scheduler = noise_scheduler)
 ```
 
 ## Generating a New Image from Noise

@@ -212,19 +212,19 @@ scorch_2d_diffusion_init <- function(model, emb_size = 128,
 #'
 #' @param input The input data, expected to be a tensor with two dimensions.
 #'
-#' @param timestep The current timestep in the diffusion process.
+#' @param timesteps The current timesteps in the diffusion process.
 #'
 #' @return The processed input tensor after embedding and concatenation.
 #'
 #' @export
 
-scorch_2d_diffusion_forward <- function(model, input, timestep) {
+scorch_2d_diffusion_forward <- function(model, input, timesteps) {
 
   x1_emb <- model$self$input_mlp1(input[, 1])
 
   x2_emb <- model$self$input_mlp2(input[, 2])
 
-  t_emb  <- model$self$time_mlp(timestep)
+  t_emb  <- model$self$time_mlp(timesteps)
 
   input  <- torch_cat(list(x1_emb, x2_emb, t_emb), dim = -1)
 

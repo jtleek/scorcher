@@ -140,7 +140,7 @@ fitted_scorch_model <- scorch_model |>
   
   compile_scorch() |> 
   
-  fit_scorch(num_epochs = 300, verbose = FALSE)
+  fit_scorch(num_epochs = 1, verbose = FALSE)                                     # 300
 
 ```
 

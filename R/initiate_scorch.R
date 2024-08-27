@@ -78,11 +78,11 @@ create_scorch_model_class <- function(obj) {
 #'
 #' scorch_model <- dl |> initiate_scorch() |>
 #'
-#'   scorch_layer(torch::nn_linear(11, 5))
+#'   scorch_layer("linear", 11, 5)
 #'
 #' print(scorch_model)
 
-print.scorch_model = function(x, ...) {
+print.scorch_model <- function(x, ...) {
 
   cat("This scorch model has a dataloader object with features: \n\n")
 

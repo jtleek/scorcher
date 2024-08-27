@@ -20,8 +20,11 @@
 #' @return A `SinusoidalEmbedding` object.
 #'
 #' @examples
+#'
 #' x <- torch::torch_tensor(1:10)
+#'
 #' emb <- SinusoidalEmbedding(8)
+#'
 #' emb(x)
 #'
 #' @export
@@ -67,8 +70,11 @@ SinusoidalEmbedding <- nn_module(
 #' @return A `LinearEmbedding` object.
 #'
 #' @examples
+#'
 #' x <- torch::torch_tensor(1:10)
+#'
 #' emb <- LinearEmbedding(8)
+#'
 #' emb(x)
 #'
 #' @export
@@ -103,8 +109,11 @@ LinearEmbedding <- nn_module(
 #' @return A `LearnableEmbedding` object.
 #'
 #' @examples
+#'
 #' x <- torch::torch_tensor(1:10)
+#'
 #' emb <- LearnableEmbedding(8)
+#'
 #' emb(x)
 #'
 #' @export
@@ -134,8 +143,11 @@ LearnableEmbedding <- nn_module(
 #' @return An `IdentityEmbedding` object.
 #'
 #' @examples
+#'
 #' x <- torch::torch_tensor(1:10)
+#'
 #' emb <- IdentityEmbedding()
+#'
 #' emb(x)
 #'
 #' @export
@@ -160,8 +172,11 @@ IdentityEmbedding <- nn_module(
 #' @return A `ZeroEmbedding` object.
 #'
 #' @examples
+#'
 #' x <- torch::torch_tensor(1:10)
+#'
 #' emb <- ZeroEmbedding()
+#'
 #' emb(x)
 #'
 #' @export
@@ -193,8 +208,11 @@ ZeroEmbedding <- nn_module(
 #' @return A `PositionalEmbedding` object.
 #'
 #' @examples
+#'
 #' x <- torch::torch_tensor(1:10)
+#'
 #' emb <- PositionalEmbedding(8, "sinusoidal")
+#'
 #' emb(x)
 #'
 #' @references <https://github.com/tanelp/tiny-diffusion>

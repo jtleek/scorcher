@@ -24,7 +24,7 @@ dl <- scorch_create_dataloader(input, output, batch_size = 2)
 
 scorch_model <- dl |> initiate_scorch() |>
 
-  scorch_layer(torch::nn_linear(11, 5))
+  scorch_layer("linear", 11, 5)
 
 print(scorch_model)
 }

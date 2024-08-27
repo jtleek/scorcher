@@ -2,6 +2,8 @@
 # COMPILE SCORCH MODEL
 #===============================================================================
 
+utils::globalVariables(c("self", "aux"))
+
 #=== MAIN FUNCTION =============================================================
 
 #' Compile a Scorch Model
@@ -35,9 +37,9 @@
 #'
 #' scorch_model <- dl |> initiate_scorch() |>
 #'
-#'   scorch_layer(torch::nn_linear(11,5)) |>
+#'   scorch_layer("linear", 11, 5) |>
 #'
-#'   scorch_layer(torch::nn_linear(5,2)) |>
+#'   scorch_layer("linear", 5, 2) |>
 #'
 #'   compile_scorch()
 #'
