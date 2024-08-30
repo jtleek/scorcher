@@ -48,17 +48,13 @@
 #'
 #' output <- mtcars |> as.matrix() |> torch::torch_tensor()
 #'
-#' dl <- scorch_create_dataloader(input,output,batch_size=2)
+#' dl <- scorch_create_dataloader(input, output, batch_size = 2)
 #'
 #' scorch_model <- dl |> initiate_scorch() |>
 #'
 #'   scorch_layer("linear", 11, 5) |>
 #'
 #'   scorch_layer("linear", 5, 2) |>
-#'
-#'   scorch_layer("linear", 2, 5) |>
-#'
-#'   scorch_layer("linear", 5, 11) |>
 #'
 #'   compile_scorch() |>
 #'
@@ -77,6 +73,19 @@ fit_scorch <- function(scorch_model,
   num_epochs = 10, verbose = TRUE, preprocess_fn = NULL,
 
   clip_grad = NULL, clip_params = list(), ...) {
+  
+  device <- if(cuda_is_available()) {
+
+    cat("Using available GPU.\n\n")
+
+    torch_device("cuda")
+
+  } else {
+
+    torch_device("cpu")
+  }
+
+  scorch_model <- scorch_model$nn_model$to(device = device)
 
   loss_fn <- do.call(loss, loss_params)
 
@@ -110,7 +119,7 @@ fit_scorch <- function(scorch_model,
       }
 
       optim_fn$zero_grad()
-
+      
       pred <- do.call(scorch_model$nn_model, c(inputs, list()))
 
       loss <- loss_fn(pred, output)

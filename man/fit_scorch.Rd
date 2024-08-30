@@ -65,17 +65,13 @@ input  <- mtcars |> as.matrix() |> torch::torch_tensor()
 
 output <- mtcars |> as.matrix() |> torch::torch_tensor()
 
-dl <- scorch_create_dataloader(input,output,batch_size=2)
+dl <- scorch_create_dataloader(input, output, batch_size = 2)
 
 scorch_model <- dl |> initiate_scorch() |>
 
   scorch_layer("linear", 11, 5) |>
 
   scorch_layer("linear", 5, 2) |>
-
-  scorch_layer("linear", 2, 5) |>
-
-  scorch_layer("linear", 5, 11) |>
 
   compile_scorch() |>
 

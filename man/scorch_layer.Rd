@@ -87,5 +87,4 @@ scorch_model <- scorch_model |>
   scorch_layer(layer_type = c("linear", "relu"),
 
    in_features = 16, out_features = 32, use_residual = TRUE)
-
 }
