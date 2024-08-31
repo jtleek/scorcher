@@ -22,5 +22,6 @@ Suggests:
     rmarkdown,
     ggimage,
     palmerpenguins,
+    datasauRus,
     tidyverse
 VignetteBuilder: knitr

@@ -6,9 +6,25 @@
 
 #' Initiate a Scorch Model
 #'
-#' @param dl An input data loader, created with scorch_create_dataloader
+#' Initializes a Scorch model object, which serves as a container for defining
+#' and organizing the model architecture. This function sets up the model with
+#' a given name, optional inheritance from another model, and a data loader for
+#' training or inference.
 #'
-#' @return A scorch model object
+#' @param dl An input data loader, created with `scorch_create_dataloader`.
+#' This data loader supplies the input and output data for the model during
+#' training or inference.
+#'
+#' @param name A character string specifying the name of the scorch model.
+#' Default is "model".
+#'
+#' @param inherits An optional string specifying from which model the current
+#' model should inherit its architecture or properties. Default is `NULL`,
+#' meaning the model does not inherit from another model and takes inputs from
+#' the dataloader.
+#'
+#' @return A scorch model object that can be further modified with additional
+#' layers, functions, and operations.
 #'
 #' @export
 #'
@@ -22,9 +38,17 @@
 #'
 #' dl |> initiate_scorch()
 
-initiate_scorch <- function(dl) {
+initiate_scorch <- function(dl, name = "model", inherits = NULL) {
 
-  l <- list(dl = dl, scorch_architecture = list())
+  l <- list(
+
+    name = name,
+
+    inherits = inherits,
+
+    dl = dl,
+
+    scorch_architecture = list())
 
   create_scorch_model_class(l)
 }
@@ -36,7 +60,7 @@ initiate_scorch <- function(dl) {
 #' Create a Scorch Model Class
 #'
 #' @description
-#' #' This function creates an object of class 'scorch_model'.
+#' This function creates an object of class 'scorch_model'.
 #'
 #' @param obj An object to be converted to a scorch model.
 #'
@@ -82,7 +106,7 @@ create_scorch_model_class <- function(obj) {
 #'
 #' print(scorch_model)
 
-print.scorch_model = function(x, ...) {
+print.scorch_model <- function(x, ...) {
 
   cat("This scorch model has a dataloader object with features: \n\n")
 

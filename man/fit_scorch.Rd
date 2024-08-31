@@ -13,8 +13,8 @@ fit_scorch(
   num_epochs = 10,
   verbose = TRUE,
   preprocess_fn = NULL,
-  clip_grad_norm = F,
-  max_norm = 1,
+  clip_grad = NULL,
+  clip_params = list(),
   ...
 )
 }
@@ -42,11 +42,14 @@ each epoch. Default is TRUE.}
 steps to preprocess batches of data before training. The function must
 return a list containing at least \code{input} and \code{output}.}
 
-\item{clip_grad_norm}{A logical value indicating whether to clip gradient
-norms. Default is FALSE.}
+\item{clip_grad}{A character string specifying the gradient clipping
+strategy. Options are \code{"norm"} or \code{"value"}. Defaults to NULL (no clipping).}
 
-\item{max_norm}{The maximum norm value for gradient clipping. Only used if
-clip_grad_norm is TRUE. Default is 1.}
+\item{clip_params}{A list of parameters for gradient clipping.
+\itemize{
+\item For \code{"norm"}: should include \code{max_norm} (a numeric value).
+\item For \code{"value"}: should include \code{clip_value} (a numeric value).
+}}
 
 \item{...}{Additional arguments passed to the \code{preprocess_fn}.}
 }

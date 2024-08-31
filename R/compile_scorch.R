@@ -2,14 +2,28 @@
 # COMPILE SCORCH MODEL
 #===============================================================================
 
+utils::globalVariables(c("self", "aux"))
+
 #=== MAIN FUNCTION =============================================================
 
 #' Compile a Scorch Model
 #'
 #' @param sm A scorch model architecture
 #'
-#' @return A scorch_model object with components (1) nn_module compiled and
-#' ready to train and (2) the scorch_dataloader object
+#' @param init_fn An optional function for initializing the model's parameters.
+#' This function takes the model and additional arguments passed via `...`.
+#'
+#' @param forward_fn An optional function for customizing the forward pass of
+#' the model. This function takes the model, input data, and additional
+#' arguments passed via `...`.
+#'
+#' @param ... Additional arguments passed to the `init_fn` and `forward_fn`.
+#'
+#' @return A list containing:
+#' \describe{
+#'   \item{nn_model}{The compiled `scorch` model object, ready for training.}
+#'   \item{dl}{The associated scorch dataloader object.}
+#' }
 #'
 #' @import torch
 #'
@@ -31,7 +45,7 @@
 #'
 #' @export
 
-compile_scorch <- function(sm) {
+compile_scorch <- function(sm, init_fn = NULL, forward_fn = NULL, ...) {
 
   model <- nn_module(
 
@@ -50,9 +64,19 @@ compile_scorch <- function(sm) {
       self$modules = modules
 
       self$functions = sm$scorch_architecture[func_index]
+
+      if (!is.null(init_fn)) {
+
+        init_fn(self, ...)
+      }
     },
 
-    forward = function(input) {
+    forward = function(input, ...) {
+
+      if (!is.null(forward_fn)) {
+
+        input <- forward_fn(self, input, ...)
+      }
 
       n_layer = length(sm$scorch_architecture) / 2
 
@@ -76,7 +100,7 @@ compile_scorch <- function(sm) {
 
           output = self$functions[[i_function]](output)
 
-          i_function. = i_function + 1
+          i_function = i_function + 1
         }
       }
 
