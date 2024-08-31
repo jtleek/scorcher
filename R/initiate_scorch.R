@@ -82,7 +82,7 @@ create_scorch_model_class <- function(obj) {
 #'
 #' print(scorch_model)
 
-print.scorch_model = function(x, ...) {
+print.scorch_model <- function(x, ...) {
 
   cat("This scorch model has a dataloader object with features: \n\n")
 

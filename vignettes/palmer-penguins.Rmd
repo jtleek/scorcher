@@ -152,11 +152,11 @@ dl <- scorch_create_dataloader(x_train, y_train, batch_size = 32)
 
 scorch_model <- dl |> 
   initiate_scorch() |> 
-  scorch_layer(nn_linear(7, 16)) |> 
-  scorch_layer(nn_relu())|>
-  scorch_layer(nn_linear(16, 8)) |> 
-  scorch_layer(nn_relu()) |>
-  scorch_layer(nn_linear(8, 3))
+  scorch_layer("linear", 7, 16) |> 
+  scorch_layer("relu") |>
+  scorch_layer("linear", 16, 8) |> 
+  scorch_layer("relu") |>
+  scorch_layer("linear", 8, 3)
 
 # Compile the neural network
 
@@ -182,7 +182,7 @@ fitted_scorch_model <- compiled_scorch_model |>
   fit_scorch(
     loss = nn_cross_entropy_loss,
     loss_params = list(weight = weight),
-    num_epochs = 200,
+    num_epochs = 1,                                                              # 200
     verbose = F)
 ```
 

@@ -4,14 +4,26 @@
 \alias{compile_scorch}
 \title{Compile a Scorch Model}
 \usage{
-compile_scorch(sm)
+compile_scorch(sm, init_fn = NULL, forward_fn = NULL, ...)
 }
 \arguments{
 \item{sm}{A scorch model architecture}
+
+\item{init_fn}{An optional function for initializing the model's parameters.
+This function takes the model and additional arguments passed via \code{...}.}
+
+\item{forward_fn}{An optional function for customizing the forward pass of
+the model. This function takes the model, input data, and additional
+arguments passed via \code{...}.}
+
+\item{...}{Additional arguments passed to the \code{init_fn} and \code{forward_fn}.}
 }
 \value{
-A scorch_model object with components (1) nn_module compiled and
-ready to train and (2) the scorch_dataloader object
+A list containing:
+\describe{
+\item{nn_model}{The compiled \code{scorch} model object, ready for training.}
+\item{dl}{The associated scorch dataloader object.}
+}
 }
 \description{
 Compile a Scorch Model
