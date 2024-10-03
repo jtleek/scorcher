@@ -73,7 +73,7 @@ fit_scorch <- function(scorch_model,
   num_epochs = 10, verbose = TRUE, preprocess_fn = NULL,
 
   clip_grad = NULL, clip_params = list(), ...) {
-  
+
   device <- if(cuda_is_available()) {
 
     cat("Using available GPU.\n\n")
@@ -82,10 +82,12 @@ fit_scorch <- function(scorch_model,
 
   } else {
 
+    cat("No GPU detected. Using available CPU.\n\n")
+
     torch_device("cpu")
   }
 
-  scorch_model <- scorch_model$nn_model$to(device = device)
+  scorch_model$nn_model  <- scorch_model$nn_model$to(device = device)
 
   loss_fn <- do.call(loss, loss_params)
 
@@ -119,7 +121,7 @@ fit_scorch <- function(scorch_model,
       }
 
       optim_fn$zero_grad()
-      
+
       pred <- do.call(scorch_model$nn_model, c(inputs, list()))
 
       loss <- loss_fn(pred, output)
