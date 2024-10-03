@@ -109,15 +109,17 @@ fit_scorch <- function(scorch_model,
 
         preprocessed <- preprocess_fn(batch, ...)
 
-        inputs <- preprocessed[!names(preprocessed) %in% "output"]
+        inputs <- lapply(preprocessed[!names(preprocessed) %in% "output"],
 
-        output <- preprocessed$output
+          function(x) x$to(device = device))
+
+        output <- preprocessed$output$to(device = device)
 
       } else {
 
-        inputs <- list(input = batch$input)
+        inputs <- list(input = batch$input$to(device = device))
 
-        output <- batch$output
+        output <- batch$output$to(device = device)
       }
 
       optim_fn$zero_grad()
