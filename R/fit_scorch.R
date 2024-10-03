@@ -87,7 +87,7 @@ fit_scorch <- function(scorch_model,
     torch_device("cpu")
   }
 
-  scorch_model$nn_model  <- scorch_model$nn_model$to(device = device)
+  scorch_model$nn_model <- scorch_model$nn_model$to(device = device)
 
   loss_fn <- do.call(loss, loss_params)
 

@@ -182,7 +182,7 @@ fitted_scorch_model <- compiled_scorch_model |>
   fit_scorch(
     loss = nn_cross_entropy_loss,
     loss_params = list(weight = weight),
-    num_epochs = 1,                                                              # 200
+    num_epochs = 200, 
     verbose = F)
 ```
 

@@ -180,7 +180,7 @@ cat(sprintf("Testing Accuracy: %.2f%%\n", accuracy * 100))
 ```{r plt2, echo=FALSE, fig.height=2}
 #- Visualizing Predictions
 
-par(mfrow = c(1, 4), mar = c(0.1, 0.1, 0.1, 0.1), oma = c(0, 0, 0, 0), pty = "s")
+par(mfrow = c(1, 4), mar = c(0.1, 0.1, 1, 0.1), oma = c(0, 0, 1, 0), pty = "s")
 
 with_no_grad({
   for (i in 1:4) {

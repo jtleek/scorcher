@@ -116,7 +116,7 @@ We'll train our neural network on the training data.
 
 ```{r}
 fitted_scorch_model <- compiled_scorch_model |> 
-  fit_scorch(loss=nn_cross_entropy_loss, num_epochs = 1, verbose = F)            # 10
+  fit_scorch(loss=nn_cross_entropy_loss, num_epochs = 10, verbose = F)
 ```
 
 ### Evaluating the Model

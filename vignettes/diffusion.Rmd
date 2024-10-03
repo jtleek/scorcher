@@ -179,7 +179,7 @@ We will then fit our simple diffusion model using `fit_scorch`. This model will 
 
 fitted_scorch_model <- compiled_scorch_model |> 
   
-  fit_scorch(loss = nn_mse_loss, optim = optim_adamw, num_epochs = 1,            # 50
+  fit_scorch(loss = nn_mse_loss, optim = optim_adamw, num_epochs = 50,
              
     verbose = F, preprocess_fn = scorch_2d_diffusion_train, 
     
