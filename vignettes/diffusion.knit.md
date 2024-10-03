@@ -7,15 +7,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  error = FALSE,
-  warning = FALSE,
-  message = FALSE,
-  comment = "#>"
-)
-```
+
 
 ## Introduction
 
@@ -55,7 +47,8 @@ DALL-E and similar models (e.g., DALL-E 2, Imagen) extend the concept of diffusi
 
 Before we begin, ensure that you have the necessary packages installed. You can install them using the following commands:
 
-```{r install, eval = F}
+
+``` r
 install.packages("tidyverse")
 install.packages("datasauRus")
 install.packages("torch")
@@ -64,7 +57,8 @@ install.packages("scorcher")
 
 Additionally, you'll need to install torch dependencies. Follow the instructions provided [here](https://torch.mlverse.org/start/installation/) to install torch. Then, you can load the `scorcher` library and the other necessary libraries for this analysis with:
 
-```{r setup}
+
+``` r
 library(tidyverse)
 library(datasauRus)
 library(torch)
@@ -75,7 +69,8 @@ library(scorcher)
 
 We start by loading and preprocession the Datasaurus Dozen dataset.
 
-```{r}
+
+``` r
 # Load the datasaurus_dozen dataset
 
 data("datasaurus_dozen")
@@ -101,7 +96,8 @@ dino_data <- datasaurus_dozen |>
 
 Let's visualize the 'dino' data.
 
-```{r}
+
+``` r
 # Visualize the dino dataset
 
 datasaurus_dozen |>
@@ -113,6 +109,8 @@ datasaurus_dozen |>
          x = "X-Coordinates", y = "Y-Coordinates")
 ```
 
+![](diffusion_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
+
 
 ## Using Scorcher
 
@@ -121,7 +119,8 @@ datasaurus_dozen |>
 Next, we'll define our 2D probabilistic diffusion model using the `scorcher` package. As before, we start by creating the dataloader using the `scorch_create_dataloader` function and defining the neural network architecture using the `initiate_scorch` and `scorch_layer` functions. For the purposes of this example, we also add a residual connection block with linear and Gaussian error linear unit (GeLU) activations. Note that for our input layer, we set the number of nodes to be three times our chosen number of nodes, as we will be concatenating a positional embedding for the two dimensions of the data and one for the timesteps. Our output layer has two nodes, one for each output data dimension. We have three hidden MLP blocks, each with 128 nodes.
 
 
-```{r}
+
+``` r
 # Create the dataloader
 
 input <- output <- torch_tensor(dino_data, dtype = torch_float())
@@ -146,7 +145,8 @@ As opposed to the examples in the `palmer-penguins` and `mnist` vignettes, in th
 
 Similarly, the `forward_fn` argument takes a function that modifies the underlying `forward` method for the torch neural network. The `forward` method defines the forward pass of the network, specifying how the input data moves through the layers of the model to produce an output. This is where you define the sequence of operations and the transformations applied to the input data. Here, we must apply the embeddings defined in the `initialize` method to our data and then concatenate the different dimension of the data and the timesteps to form one input for the neural network. We do this with the provided `scorch_2d_diffusion_forward` function.
 
-```{r}
+
+``` r
 # Compile the neural network
 
 compiled_scorch_model <- scorch_model |>
@@ -161,7 +161,8 @@ compiled_scorch_model <- scorch_model |>
 
 We must also create a noise scheduler by defining a set of Gaussian noise distributions that will be added to the data over time. We do this using the included `NoiseScheduler` function, which we transcribed from the ['tiny-diffusion'](https://github.com/tanelp/tiny-diffusion) implementation in PyTorch. We establish 50 timesteps for this example.
 
-```{r}
+
+``` r
 # Define the noise scheduler
 
 noise_scheduler <- NoiseScheduler$new(
@@ -174,7 +175,8 @@ noise_scheduler <- NoiseScheduler$new(
 
 We will then fit our simple diffusion model using `fit_scorch`. This model will involve the neural network we defined above to learn to reverse the diffusion process. As with `compile_scorch`, the `fit_scorch` function has an optional argument, `preprocess_fn`, that takes a function to define additional steps in the training procedure. Here, we implement the function `scorch_2d_diffusion_train`, which defines the timesteps and adds noise to the data. This function takes a data 'batch' as input, as well as the noise scheduler, which is passed as an additional argument to `fit_scorch`.
 
-```{r}
+
+``` r
 # Train the model
 
 fitted_scorch_model <- compiled_scorch_model |> 
@@ -186,13 +188,15 @@ fitted_scorch_model <- compiled_scorch_model |>
     clip_grad = "norm", clip_params = list(max_norm = 1),
     
     noise_scheduler = noise_scheduler)
+#> No GPU detected. Using available CPU.
 ```
 
 ## Generating a New Image from Noise
 
 Once the model is trained, we can use it to generate new data points to resemble the original 'dino' data from a completely random sample. We illustrate how the reverse process recovers the distribution of the training data after 50 epochs.
 
-```{r}
+
+``` r
 
 fitted_scorch_model$eval()
 
@@ -224,8 +228,9 @@ ggplot() +
     xlim(xmin, xmax) +
     ylim(ymin, ymax) +
     theme_void()
-
 ```
+
+![](diffusion_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
 
 
 ## Conclusion

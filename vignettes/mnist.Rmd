@@ -70,9 +70,9 @@ Let's visualize some samples from the training dataset.
 ```{r plt1}
 # Visualizing the MNIST training data
 
-par(mfrow = c(4, 4))
+par(mfrow = c(2, 2), mar = c(1, 1, 1, 1), pty = "s")
 
-for (i in 1:16) {
+for (i in 1:4) {
   img <- x_train[i, , drop = F] |> as.array() |> matrix(nrow = 28)
   image(t(img[nrow(img):1, ]), axes = F, col = gray.colors(256))
 }
@@ -116,7 +116,7 @@ We'll train our neural network on the training data.
 
 ```{r}
 fitted_scorch_model <- compiled_scorch_model |> 
-  fit_scorch(loss=nn_cross_entropy_loss, num_epochs = 1, verbose = F)            # 10
+  fit_scorch(loss=nn_cross_entropy_loss, num_epochs = 10, verbose = F)
 ```
 
 ### Evaluating the Model
@@ -155,10 +155,10 @@ We can also visualize our predictions:
 ```{r}
 # Visualizing some of the predictions
 
-par(mfrow = c(4, 4))
+par(mfrow = c(2, 2), mar = c(1, 1, 1.5, 1), pty = "s")
 
 with_no_grad({
-  for (i in 1:16) {
+  for (i in 1:4) {
     img <- x_test[i, , drop = F] |> as.array() 
     prediction <- fitted_scorch_model(
       torch_tensor(img, dtype = torch_float())) |> torch_argmax(dim = 2) - 1

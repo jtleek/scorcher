@@ -7,18 +7,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  error = FALSE,
-  warning = FALSE,
-  message = FALSE,
-  comment = "#>",
-  out.width = "100%",
-  fig.retina = 2,
-  fig.align = 'center'
-)
-```
+
 
 ## Introduction
 
@@ -37,7 +26,8 @@ This vignette demonstrates how to use the `scorcher` package to fit a neural net
 
 Before we begin, ensure that you have the necessary packages installed. You can install them using the following commands:
 
-```{r install, eval = F}
+
+``` r
 install.packages("tidyverse")
 install.packages("ggimage")
 install.packages("torch")
@@ -47,7 +37,8 @@ install.packages("palmerpenguins")
 
 Additionally, you'll need to install torch dependencies. Follow the instructions provided [here](https://torch.mlverse.org/start/installation/) to install torch. Then, you can load the `scorcher` library and the other necessary libraries for this analysis with:
 
-```{r setup}
+
+``` r
 library(tidyverse)
 library(ggimage)
 library(torch)
@@ -59,7 +50,8 @@ library(palmerpenguins)
 
 We'll now load the Palmer Penguins dataset.
 
-```{r}
+
+``` r
 data("penguins")
 
 # Removing rows with missing values for simplicity
@@ -69,13 +61,23 @@ penguins <- na.omit(penguins)
 # Print the first few rows of the data
 
 head(penguins)
+#> # A tibble: 6 x 8
+#>   species island    bill_length_mm bill_depth_mm flipper_length_mm body_mass_g sex     year
+#>   <fct>   <fct>              <dbl>         <dbl>             <int>       <int> <fct>  <int>
+#> 1 Adelie  Torgersen           39.1          18.7               181        3750 male    2007
+#> 2 Adelie  Torgersen           39.5          17.4               186        3800 female  2007
+#> 3 Adelie  Torgersen           40.3          18                 195        3250 female  2007
+#> 4 Adelie  Torgersen           36.7          19.3               193        3450 female  2007
+#> 5 Adelie  Torgersen           39.3          20.6               190        3650 male    2007
+#> 6 Adelie  Torgersen           38.9          17.8               181        3625 female  2007
 ```
 
 ### Visualizing the Data
 
 Let's visualize the dataset to better understand its structure and relationships.
 
-```{r, fig.width=6, fig.height=4}
+
+``` r
 # Visualizing the Palmer Penguins data
 
 library(tidyverse)
@@ -100,14 +102,16 @@ penguins |>
          color = "Species",
         shape = "Species") +
     theme(legend.position = "bottom")
-  
 ```
+
+<img src="palmer-penguins_files/figure-html/unnamed-chunk-3-1.png" width="100%" style="display: block; margin: auto;" />
 
 ### Data Preprocessing
 
 For our neural network, we need to preprocess the data. This includes normalizing the numerical features and encoding the categorical features.
 
-```{r}
+
+``` r
 # Normalizing numerical features
 
 penguins$bill_length_mm <- scale(penguins$bill_length_mm)
@@ -126,7 +130,8 @@ penguins$sex <- as.integer(as.factor(penguins$sex))
 
 Next, we'll split the data into training and test sets.
 
-```{r}
+
+``` r
 set.seed(123)
 
 train_indices <- sample(1:nrow(penguins), 0.8 * nrow(penguins))
@@ -140,7 +145,8 @@ test_data <- penguins[-train_indices, ]
 
 Next, we'll define our neural network using the `scorcher` package.
 
-```{r}
+
+``` r
 # Create the dataloader
 
 x_train <- torch_tensor(as.matrix(train_data[, -1]), dtype = torch_float())
@@ -168,7 +174,8 @@ compiled_scorch_model <- scorch_model |>
 
 We'll train our neural network on the training data.
 
-```{r}
+
+``` r
 # Define weights for imbalanced classes
 
 weight <- length(train_data$species) /
@@ -184,13 +191,15 @@ fitted_scorch_model <- compiled_scorch_model |>
     loss_params = list(weight = weight),
     num_epochs = 200, 
     verbose = F)
+#> No GPU detected. Using available CPU.
 ```
 
 ### Evaluating the Model
 
 Finally, we'll evaluate our model on the test data.
 
-```{r}
+
+``` r
 
 fitted_scorch_model$eval()
 
@@ -202,7 +211,7 @@ pred <- torch_argmax(output, dim = 2)
 
 accuracy <- sum(pred == y_test)$item() / length(y_test)
 cat(sprintf("Test Accuracy: %.2f%%\n", accuracy * 100))
-
+#> Test Accuracy: 91.04%
 ```
 
 ## Conclusion

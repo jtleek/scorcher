@@ -7,14 +7,10 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
-```
 
-```{r setup}
+
+
+``` r
 library(scorcher)
 ```
 
@@ -26,7 +22,8 @@ The `scorch_layer` function is a versatile tool for adding layers or residual bl
 
 Before using `scorch_layer`, ensure that you have the following packages installed and loaded:
 
-```{r}
+
+``` r
 library(scorcher)
 library(torch)
 library(tidyverse)
@@ -36,7 +33,8 @@ library(tidyverse)
 
 For this vignette, we’ll use the `mtcars` dataset, which contains various car attributes such as miles per gallon (mpg), horsepower (hp), and weight (wt). We will build a simple neural network to predict `mpg` from `hp` and `wt`.
 
-```{r}
+
+``` r
 # Prepare the data
 
 data(mtcars)
@@ -68,7 +66,8 @@ y <- y$unsqueeze(2)
 
 Let's start by building a simple neural network using `scorch_layer` to predict `mpg` from `hp` and `wt`.
 
-```{r}
+
+``` r
 
 # Create the dataloader
 
@@ -93,6 +92,19 @@ scorch_model <- scorch_model |>
 # View the model architecture
 
 print(scorch_model)
+#> This scorch model has a dataloader object with features: 
+#> 
+#> This is a dataloader object with features:
+#>  * Batch size: 32
+#>  * Number of batches: 1
+#>  * Dimension of input tensors: 2
+#>  * Dimension of output tensors: 1
+#> 
+#>  and model architecture:
+#> 
+#> * Layer 1 is a nn_linear layer
+#> * Layer 2 is a nn_relu layer
+#> * Layer 3 is a nn_linear layer
 ```
 
 This network consists of:
@@ -104,7 +116,8 @@ This network consists of:
 
 Next, let's build a model with the above architecture and an added residual block. A residual connection is a technique where the input to a block of layers is added directly to the block's output. This creates a shortcut path, or "skip connection," that allows the original input to bypass one or more layers. Residual connections are beneficial for training deep networks because they help mitigate the vanishing gradient problem by allowing gradients to flow more easily through the network.
 
-```{r}
+
+``` r
 
 # Create and view updated model
 
@@ -119,7 +132,20 @@ scorch_model <- dl |>
   scorch_layer(layer_type = "linear", 16, 1)
 
 print(scorch_model)
-  
+#> This scorch model has a dataloader object with features: 
+#> 
+#> This is a dataloader object with features:
+#>  * Batch size: 32
+#>  * Number of batches: 1
+#>  * Dimension of input tensors: 2
+#>  * Dimension of output tensors: 1
+#> 
+#>  and model architecture:
+#> 
+#> * Layer 1 is a nn_linear layer
+#> * Layer 2 is a nn_relu layer
+#> * Layer 3 is a residual_block layer
+#> * Layer 4 is a nn_linear layer
 ```
 
 This model now includes:
@@ -132,7 +158,8 @@ This model now includes:
 Now that the model is built, we can train it using the `mtcars` data. We will 
 use the Mean Squared Error (MSE) loss function and the Adam optimizer.
 
-```{r}
+
+``` r
 
 # Compile and fit the neural network
 
@@ -141,14 +168,15 @@ fitted_scorch_model <- scorch_model |>
   compile_scorch() |> 
   
   fit_scorch(num_epochs = 300, verbose = FALSE)
-
+#> No GPU detected. Using available CPU.
 ```
 
 ## Evaluating the Model
 
 After training, we can evaluate the model’s performance by comparing the predicted `mpg` values with the actual values.
 
-```{r}
+
+``` r
 # Make predictions
 
 fitted_scorch_model$eval()
@@ -175,6 +203,8 @@ ggplot(plt_dat, aes(x = actual, y = predicted)) +
     
     y = "Predicted MPG")
 ```
+
+![](scorch_layer_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
 
 The plot shows how well the model's predictions align with the actual `mpg` values. A perfect model would have all points lying on the dashed line.
 
