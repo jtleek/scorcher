@@ -4,53 +4,99 @@
 
 #=== MAIN FUNCTION =============================================================
 
+#-------------------------------------------------------------------------------
+# NOTES:
+#
+# I've kept this where it takes in a dataloader and outputs a scorch_model
+# object, but I've:
+#
+#   1. Changed the object holding the architecture from a list to a tibble,
+#      which will store the layers in a graph structure.
+#
+#   2. Added more components to the scorch_model object to help with the
+#      bookkeeping for more complex architectures.
+#-------------------------------------------------------------------------------
+
 #' Initiate a Scorch Model
 #'
-#' Initializes a Scorch model object, which serves as a container for defining
-#' and organizing the model architecture. This function sets up the model with
-#' a given name, optional inheritance from another model, and a data loader for
-#' training or inference.
+#' Creates a new `scorch_model` object to which you can add layers, inputs, and
+#' outputs.
 #'
-#' @param dl An input data loader, created with `scorch_create_dataloader`.
-#' This data loader supplies the input and output data for the model during
-#' training or inference.
+#' This function initializes an empty model graph and optionally attaches a
+#' dataloader created by \link{scorch_create_dataloader}.
 #'
-#' @param name A character string specifying the name of the scorch model.
-#' Default is "model".
+#' @param dl Optional dataloader created by \link{scorch_create_dataloader}
+#' to attach to the model (default is `NULL`).
 #'
-#' @param inherits An optional string specifying from which model the current
-#' model should inherit its architecture or properties. Default is `NULL`,
-#' meaning the model does not inherit from another model and takes inputs from
-#' the dataloader.
+#' @return A `scorch_model` object with the following components:
 #'
-#' @return A scorch model object that can be further modified with additional
-#' layers, functions, and operations.
-#'
-#' @export
+#' \describe{
+#'   \item{graph}{A tibble storing layer definitions in graph order.}
+#'   \item{inputs}{Character vector of input node names.}
+#'   \item{outputs}{Character vector of output node names.}
+#'   \item{compiled}{Logical flag indicating if the model has been compiled.}
+#'   \item{nn_model}{The compiled `torch::nn_module`, available once compiled.}
+#'   \item{optimizer}{The optimizer object, available once compiled.}
+#'   \item{loss_fn}{The loss function(s), available once compiled.}
+#'   \item{dl}{The attached dataloader, if provided.}
+#' }
 #'
 #' @examples
 #'
-#' input  <- mtcars |> as.matrix() |> torch::torch_tensor()
+#' dl <- scorch_create_dataloader(
 #'
-#' output <- mtcars |> as.matrix() |> torch::torch_tensor()
+#'     input  = mtcars$wt,
+#'     output = mtcars$mpg,
+#'     batch_size = 16
+#' )
 #'
-#' dl <- scorch_create_dataloader(input, output, batch_size = 2)
+#' sm <- initiate_scorch(dl)
 #'
-#' dl |> initiate_scorch()
+#' print(sm)
+#'
+#' @import tibble
+#'
+#' @export
 
-initiate_scorch <- function(dl, name = "model", inherits = NULL) {
+initiate_scorch <- function(
 
-  l <- list(
+    dl = NULL) {
 
-    name = name,
+    #- Create the base structure for the scorch_model object
 
-    inherits = inherits,
+    sm <- list(
 
-    dl = dl,
+        graph = tibble::tibble(
 
-    scorch_architecture = list())
+            name = character(),
+            module = list(),
+            inputs = list()
+        ),
 
-  create_scorch_model_class(l)
+        inputs    = character(),
+        outputs   = character(),
+        compiled  = FALSE,
+        nn_model  = NULL,
+        optimizer = NULL,
+        loss_fn   = NULL,
+        dl        = NULL
+    )
+
+    class(sm) <- "scorch_model"
+
+    #- If a dataloader is provided, attach it
+
+    if (!is.null(dl)) {
+
+      if (!inherits(dl, "dataloader")) {
+
+        stop("`dl` must be a torch::dataloader", call. = FALSE)
+      }
+
+      sm$dl <- dl
+    }
+
+    return(sm)
 }
 
 #=== HELPERS ===================================================================

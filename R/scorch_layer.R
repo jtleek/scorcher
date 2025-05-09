@@ -4,174 +4,468 @@
 
 #=== MAIN FUNCTION =============================================================
 
+#-------------------------------------------------------------------------------
+# NOTES:
+#
+#   1. Big update was was adding "name" and "inputs" arguments to help with
+#      the bookkeeping for more complex architectures
+#
+#   2. Also made the layer_fn argument more general, so it can now take either
+#      a string or a torch module constructor.
+#-------------------------------------------------------------------------------
+
 #' Add a Layer to a Scorch Model
 #'
-#' @description
-#' This function adds a neural network layer or a residual block to a scorch
-#' model architecture. The layer can include a single activation or a series
-#' of layers specified by a vector of layer types.
+#' Append a new layer (module) to the `scorch_model` graph. The `layer_fn` can
+#' be a string (e.g., "linear", "nn_conv2d"), an unquoted torch constructor
+#' (e.g., `linear`), or a `torch::nn_*` function (e.g. `nn_linear`).
 #'
-#' @param scorch_model A scorch model object to which the layer or block will
-#' be added.
+#' @param scorch_model A `scorch_model` object.
 #'
-#' @param layer_type A string or character vector specifying the type of
-#' layer to add (e.g., \code{c("conv2d", "gelu", "linear", "relu")}).
-#' Elements will be converted to the corresponding torch layer function
-#' (e.g., \code{nn_linear}, \code{nn_conv2d}).
+#' @param name Unique name for this layer node in the graph.
 #'
-#' @param in_features Optional. An integer specifying the number of input
-#' features for the layer. Used for layers such as \code{nn_linear}. Default
-#' is \code{NULL}.
+#' @param layer_fn Either a string prefix (e.g. "linear"), a full string name
+#' (e.g. "nn_linear"), an unquoted torch constructor (e.g., `linear`), or a
+#' `torch::nn_*` function (e.g. `nn_linear`).
 #'
-#' @param out_features Optional. An integer specifying the number of output
-#' features for the layer. Used for layers such as \code{nn_linear}. Default
-#' is \code{NULL}.
+#' @param inputs Character vector of upstream node names. If `NULL`, uses the
+#' sole input (if no layers yet) or the last-built layer.
 #'
-#' @param use_residual Logical value indicating whether to use a residual
-#' connection. If \code{TRUE}, the function adds a residual block of the
-#' form \code{x + f(g(x))}. Default is \code{FALSE}.
+#' @param ... Additional parameters passed to `layer_fn()` (e.g. `in_features`,
+#' `out_features`, `kernel_size`).
 #'
-#' @param ... Additional arguments passed to the layer constructors. These can
-#' include other required or optional parameters depending on the layer type.
-#'
-#' @details
-#' The \code{layer_type} argument can accept either a single string or a vector
-#' of strings. If a single string is provided, the function adds a single layer
-#' of the specified type to the model. For example, if
-#' \code{layer_type = "conv2d"}, the function will add a 2D convolutional layer.
-#'
-#' If a vector of strings is provided, the function creates a sequential block
-#' consisting of multiple layers, where each element in the vector specifies a
-#' layer or activation function to include in the block. For example, if
-#' \code{layer_type = c("conv2d", "gelu", "linear", "relu")}, the function will
-#' add a block that first applies a 2D convolution, then the GELU activation,
-#' followed by a linear layer, and finally the ReLU activation.
-#'
-#' When \code{use_residual = TRUE}, the function constructs a residual
-#' connection block of the form \code{x + f(g(x))}, where \code{f} and
-#' \code{g} represent the layers and activations specified by \code{layer_type}.
-#'
-#' A residual connection is a technique where the input to a block of layers
-#' is added directly to the block's output. This creates a shortcut path, or
-#' "skip connection," that allows the original input to bypass one or more
-#' layers. Residual connections are beneficial for training deep networks
-#' because they help mitigate the vanishing gradient problem by allowing
-#' gradients to flow more easily through the network.
-#'
-#' @return Returns the updated scorch model with the new layer or block
-#' added to its architecture.
+#' @return The updated `scorch_model` with the new layer appended.
 #'
 #' @examples
 #'
-#' input  <- mtcars |> as.matrix() |> torch::torch_tensor()
+#' dl <- scorch_create_dataloader(mtcars$wt, mtcars$mpg, batch_size=16)
 #'
-#' output <- mtcars |> as.matrix() |> torch::torch_tensor()
+#' sm <- dl |>
 #'
-#' dl <- scorch_create_dataloader(input, output, batch_size = 2)
+#'   initiate_scorch() |>
 #'
-#' scorch_model <- dl |> initiate_scorch() |>
+#'   scorch_input("wt") |>
 #'
-#'   scorch_layer(layer_type = "linear", 16, 32)
+#'   scorch_layer(
 #'
-#' scorch_model <- scorch_model |>
+#'     name = "h1",
+#'     layer_fn = "linear",
+#'     inputs = "wt",
+#'     in_features = 1,
+#'     out_features = 8
+#'   )
 #'
-#'   scorch_layer(layer_type = c("linear", "relu"),
-#'
-#'    in_features = 16, out_features = 32, use_residual = TRUE)
+#' print(sm)
 #'
 #' @export
 
-scorch_layer <- function(scorch_model, layer_type,
+scorch_layer <- function(
 
-  in_features = NULL, out_features = NULL, use_residual = FALSE, ...) {
+    scorch_model,
+    name,
+    layer_fn,
+    inputs = NULL, ...) {
 
-  # Convert layer_type to lowercase to ensure consistency
+    #- Capture the raw arguments
 
-  layer_type <- tolower(layer_type)
+    mc <- match.call()
 
-  # Check if all layer types are valid
+    fn_expr <- mc$layer_fn
 
-  valid_layers <- sapply(layer_type, function(layer) {
+    if (is.symbol(fn_expr) || is.character(layer_fn)) {
 
-    function_name <- paste0("nn_", layer)
+        #- Either unquoted name (symbol) or a string
 
-    exists(function_name, envir = asNamespace("torch"))
-  })
+        fn_name <- if (is.symbol(fn_expr)) as.character(fn_expr) else layer_fn
 
-  if (!all(valid_layers)) {
+        #- Ensure it starts with "nn_"
 
-    invalid_layers <- layer_type[!valid_layers]
+        if (!grepl("^nn_", fn_name)) fn_name <- paste0("nn_", fn_name)
 
-    stop(paste("Invalid layer types detected:",
+        #- Check existence in torch namespace
 
-      paste(invalid_layers, collapse = ", ")))
-  }
+        if (!exists(fn_name, envir = asNamespace("torch"), mode = "function")) {
 
-  # Create layers
+            stop("No torch layer called '", fn_name, "'.", call. = FALSE)
+        }
 
-  layers <- lapply(layer_type, function(layer) {
+        layer_fn <- get(fn_name, envir = asNamespace("torch"))
 
-    function_name <- paste0("nn_", layer)
+    } else if (is.function(layer_fn)) {
 
-    nn_function <- get(function_name, envir = asNamespace("torch"))
+        #- User passed directly (e.g., nn_linear) — keep it
 
-    # Collect optional arguments
+    } else {
 
-    args_list <- list(...)
-
-    if ("in_features" %in% names(formals(nn_function))) {
-
-      args_list$in_features <- in_features
+        stop("`layer_fn` must be a torch layer name or function", call. = FALSE)
     }
 
-    if ("out_features" %in% names(formals(nn_function))) {
+    #- Pick inputs
 
-      args_list$out_features <- out_features
+    if (is.null(inputs)) {
+
+        if (nrow(scorch_model$graph) == 0) {
+
+            if (length(scorch_model$inputs) != 1) {
+
+                stop("Must specify 'inputs' when multiple inputs exist.",
+
+                    call. = FALSE)
+            }
+
+            inputs <- scorch_model$inputs
+
+        } else {
+
+            inputs <- tail(scorch_model$graph$name, 1)
+        }
     }
 
-    do.call(nn_function, args_list)
-  })
+    #- Instantiate module
 
-  if (use_residual) {
+    module <- do.call(layer_fn, list(...))
 
-    # If residual connection is used, wrap the layers in a residual block
+    #- Append to graph
 
-    residual_block <- nn_module(
+    scorch_model$graph <- tibble::add_row(
 
-      initialize = function() {
+        scorch_model$graph,
 
-        self$block <- nn_sequential(!!!layers)
-      },
-
-      forward = function(x) {
-
-        x_residual <- self$block(x)
-
-        x + x_residual
-      }
+        name    = name,
+        module  = list(module),
+        inputs  = list(inputs)
     )
 
-    res_layer <- residual_block()
-
-    class(res_layer) <- c("residual_block", class(res_layer))
-
-    scorch_model$scorch_architecture <- append(
-
-      scorch_model$scorch_architecture, list(res_layer, type = "layer"))
-
-  } else {
-
-    # Add the sequential block of layers to the model
-
-    for (i in seq_along(layers)) {
-
-      scorch_model$scorch_architecture <- append(
-
-        scorch_model$scorch_architecture, list(layers[[i]], type = "layer"))
-    }
-  }
-
-  scorch_model
+    return(scorch_model)
 }
+
+#=== SPECIFIC LAYERS ===========================================================
+
+#' Add a Concatenation Node to a Scorch Model
+#'
+#' @param scorch_model A `scorch_model` object.
+#'
+#' @param name Unique name for the concat node.
+#'
+#' @param inputs Character vector of node names to concatenate.
+#'
+#' @param dim Integer dimension to concatenate along (default 1).
+#'
+#' @return The updated `scorch_model`.
+#'
+#' @examples
+#'
+#' dl <- scorch_create_dataloader(
+#'
+#'   input  = list(hp = mtcars$hp, disp = mtcars$disp),
+#'   output = mtcars$mpg
+#' )
+#'
+#' sm <- dl |>
+#'
+#'   initiate_scorch() |>
+#'
+#'   scorch_input("hp") |>
+#'
+#'   scorch_input("disp") |>
+#'
+#'   scorch_concat("merged", c("hp","disp"), dim = 2)
+#'
+#' print(sm)
+#'
+#' @export
+
+scorch_concat <- function(
+
+    scorch_model,
+    name,
+    inputs,
+    dim = 1) {
+
+    concat_mod <- torch::nn_module(
+
+        initialize = function() {},
+
+        forward = function(...) {
+
+            torch::torch_cat(list(...), dim = dim)
+        }
+    )()
+
+    scorch_model$graph <- tibble::add_row(
+
+        scorch_model$graph,
+        name   = name,
+        module = list(concat_mod),
+        inputs = list(inputs)
+    )
+
+    return(scorch_model)
+}
+
+#' Add a Multi-Head Attention Node
+#'
+#' @param scorch_model A `scorch_model` object.
+#'
+#' @param name Unique name for the attention node.
+#'
+#' @param inputs Character vector c("query", "key", "value").
+#'
+#' @param embed_dim Embedding dimension.
+#'
+#' @param num_heads Number of attention heads.
+#'
+#' @param ... Additional args.
+#'
+#' @return The updated `scorch_model`.
+#'
+#' @examples
+#'
+#' # Need
+#'
+#' @export
+
+scorch_attention <- function(
+
+    scorch_model,
+    name,
+    inputs,
+    embed_dim,
+    num_heads, ...) {
+
+    attn_mod <- torch::nn_multihead_attention(embed_dim, num_heads, ...)
+
+    scorch_model$graph <- tibble::add_row(
+
+        scorch_model$graph,
+
+        name   = name,
+        module = list(attn_mod),
+        inputs = list(inputs)
+    )
+
+    return(scorch_model)
+}
+
+#' Add a Transformer Encoder Layer
+#'
+#' @param scorch_model A `scorch_model` object.
+#'
+#' @param name Unique name for the encoder.
+#'
+#' @param inputs Single upstream node name.
+#'
+#' @param embed_dim Model dimension (d_model).
+#'
+#' @param num_heads Number of heads.
+#'
+#' @param dim_feedforward Inner feedforward dim (default 2048).
+#'
+#' @param dropout Dropout rate (default 0.1).
+#'
+#' @param ... Additional args.
+#'
+#' @return The updated `scorch_model`.
+#'
+#' @examples
+#'
+#' # Need
+#'
+#' @export
+
+scorch_transformer_encoder <- function(
+
+    scorch_model,
+    name,
+    inputs,
+    embed_dim,
+    num_heads,
+    dim_feedforward = 2048,
+    dropout = 0.1,
+    ...) {
+
+    tr_mod <- torch::nn_transformer_encoder_layer(
+
+        d_model = embed_dim,
+        nhead = num_heads,
+        dim_feedforward = dim_feedforward,
+        dropout = dropout,
+        ...
+    )
+
+    scorch_model$graph <- tibble::add_row(
+
+        scorch_model$graph,
+
+        name   = name,
+        module = list(tr_mod),
+        inputs = list(inputs)
+    )
+
+    return(scorch_model)
+}
+
+#' Add a Skip Connection Node
+#'
+#' @param scorch_model A `scorch_model` object.
+#'
+#' @param name Unique name for the skip node.
+#'
+#' @param inputs Character vector length 2.
+#'
+#' @return The updated `scorch_model`.
+#'
+#' @examples
+#'
+#' dl <- scorch_create_dataloader(
+#'
+#'   input  = list(x = mtcars$hp),
+#'   output = mtcars$mpg
+#' )
+#'
+#' sm <- dl |>
+#'
+#'   initiate_scorch() |>
+#'
+#'   scorch_input("x") |>
+#'
+#'   scorch_add_skip("skip", c("x","x"))
+#'
+#' print(sm)
+#'
+#' @export
+
+scorch_add_skip <- function(
+
+    scorch_model,
+    name,
+    inputs) {
+
+    if (length(inputs) != 2) {
+
+        stop("`inputs` must be length 2.", call. = FALSE)
+    }
+
+    skip_mod <- torch::nn_module(
+
+        initialize = function() {},
+
+        forward = function(x, skip) {x + skip}
+    )()
+
+    scorch_model$graph <- tibble::add_row(
+
+        scorch_model$graph,
+
+        name   = name,
+        module = list(skip_mod),
+        inputs = list(inputs)
+    )
+
+    return(scorch_model)
+}
+
+#' Add a BatchNorm1d Layer
+#'
+#' @param scorch_model A `scorch_model` object.
+#'
+#' @param name Unique name for the batchnorm layer.
+#'
+#' @param inputs Single upstream node name.
+#'
+#' @param num_features Number of features (channels).
+#'
+#' @param ... Additional args.
+#'
+#' @return The updated `scorch_model`.
+#'
+#' @examples
+#'
+#' dl <- scorch_create_dataloader(mtcars$wt, mtcars$mpg)
+#'
+#' sm <- dl |>
+#'
+#'   initiate_scorch() |>
+#'
+#'   scorch_input("wt") |>
+#'
+#'   scorch_batchnorm("bn", "wt", num_features = 1)
+#'
+#' print(sm)
+#'
+#' @export
+
+scorch_batchnorm <- function(
+
+    scorch_model,
+    name,
+    inputs,
+    num_features,
+    ...) {
+
+    bn_mod <- torch::nn_batch_norm1d(num_features = num_features, ...)
+
+    scorch_model$graph <- tibble::add_row(
+
+        scorch_model$graph,
+        name   = name,
+        module = list(bn_mod),
+        inputs = list(inputs)
+    )
+
+    return(scorch_model)
+}
+
+#' Add a Dropout Layer
+#'
+#' @param scorch_model A `scorch_model` object.
+#'
+#' @param name Unique name for the dropout layer.
+#'
+#' @param inputs Single upstream node name.
+#'
+#' @param p Dropout probability (default 0.5).
+#'
+#' @param ... Additional args.
+#'
+#' @return The updated `scorch_model`.
+#'
+#' @examples
+#'
+#' dl <- scorch_create_dataloader(mtcars$wt, mtcars$mpg)
+#'
+#' sm <- dl |>
+#'
+#'   initiate_scorch() |>
+#'
+#'   scorch_input("wt") |>
+#'
+#'   scorch_dropout("do", "wt", p = 0.2)
+#'
+#' print(sm)
+#'
+#' @export
+
+scorch_dropout <- function(
+
+    scorch_model,
+    name,
+    inputs,
+    p = 0.5,
+    ...) {
+
+    do_mod <- torch::nn_dropout(p = p, ...)
+
+    scorch_model$graph <- tibble::add_row(
+
+        scorch_model$graph,
+        name   = name,
+        module = list(do_mod),
+        inputs = list(inputs)
+    )
+
+    return(scorch_model)
+}
+
 
 #=== END =======================================================================

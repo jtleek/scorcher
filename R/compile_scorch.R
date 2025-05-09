@@ -6,109 +6,138 @@ utils::globalVariables(c("self", "aux"))
 
 #=== MAIN FUNCTION =============================================================
 
+#-------------------------------------------------------------------------------
+# NOTES:
+#
+#   1. Main update is that the model now compiles by traversing the topology
+#      defined by the scorch_model graph (tibble), rather than sequentially
+#      adding layers according to their list position.
+#
+#   2. Also now handles multiple inputs/outputs.
+#-------------------------------------------------------------------------------
+
 #' Compile a Scorch Model
 #'
-#' @param sm A scorch model architecture
+#' Traverse the topology defined in the scorch model graph to build a single
+#' `torch::nn_module`. Also attaches the specified loss function and optimizer.
 #'
-#' @param init_fn An optional function for initializing the model's parameters.
-#' This function takes the model and additional arguments passed via `...`.
+#' @param sm A `scorch_model` object built via `initiate_scorch()` and layers.
 #'
-#' @param forward_fn An optional function for customizing the forward pass of
-#' the model. This function takes the model, input data, and additional
-#' arguments passed via `...`.
+#' @param loss_fn A loss function, e.g., `nn_mse_loss()` or named list of
+#' losses for multi-head models.
 #'
-#' @param ... Additional arguments passed to the `init_fn` and `forward_fn`.
+#' @param optimizer_fn Optimizer constructor, e.g., `optim_adam`.
 #'
-#' @return A list containing:
-#' \describe{
-#'   \item{nn_model}{The compiled `scorch` model object, ready for training.}
-#'   \item{dl}{The associated scorch dataloader object.}
-#' }
+#' @param optimizer_params Named list of optimizer parameters
+#' (e.g., `list(lr = 1e-3)`).
 #'
-#' @import torch
+#' @return The same `scorch_model` with `nn_model`, `optimizer`, and `loss_fn`
+#' set, and `compiled = TRUE`.
 #'
 #' @examples
 #'
-#' input  <- mtcars |> as.matrix() |> torch::torch_tensor()
+#' dl <- scorch_create_dataloader(mtcars$wt, mtcars$mpg, batch_size=16)
 #'
-#' output <- mtcars |> as.matrix() |> torch::torch_tensor()
+#' sm <- dl |>
 #'
-#' dl <- scorch_create_dataloader(input, output, batch_size = 2)
+#'   initiate_scorch() |>
 #'
-#' scorch_model <- dl |> initiate_scorch() |>
+#'   scorch_input("wt") |>
 #'
-#'   scorch_layer("linear", 11, 5) |>
+#'   scorch_layer("h1", "linear", in_features = 1, out_features = 8) |>
 #'
-#'   scorch_layer("linear", 5, 2) |>
+#'   scorch_output("h1")
 #'
-#'   compile_scorch()
+#' sm <- compile_scorch(sm,
+#'
+#'   loss_fn = nn_mse_loss(),
+#'
+#'   optimizer_fn = optim_adam,
+#'
+#'   optimizer_params = list(lr=0.01))
+#'
+#' print(sm)
+#'
+#' @import torch
 #'
 #' @export
 
-compile_scorch <- function(sm, init_fn = NULL, forward_fn = NULL, ...) {
+compile_scorch <- function(
 
-  model <- nn_module(
+    sm,
+    loss_fn = nn_mse_loss(),
+    optimizer_fn = optim_adam,
+    optimizer_params = list(lr = 1e-3)) {
 
-    initialize = function(sm) {
+    graph   <- sm$graph
+    inputs  <- sm$inputs
+    outputs <- sm$outputs
 
-      n_layer = length(sm$scorch_architecture) / 2
+    mod <- torch::nn_module(
 
-      layer_types = sm$scorch_architecture[2 * (1:n_layer)] |> unlist()
+        initialize = function() {
 
-      layer_index = which(layer_types == "layer") * 2 - 1
+            for (i in seq_len(nrow(graph))) {
 
-      func_index = which(layer_types == "function") * 2 - 1
+                self[[graph$name[i]]] <- graph$module[[i]]
+            }
+        },
 
-      modules = nn_module_list(sm$scorch_architecture[layer_index])
+        forward = function(...) {
 
-      self$modules = modules
+            args <- list(...)
 
-      self$functions = sm$scorch_architecture[func_index]
+            env <- new.env(parent = emptyenv())
 
-      if (!is.null(init_fn)) {
+            #- Assign inputs
 
-        init_fn(self, ...)
-      }
-    },
+            if (length(inputs) == 1) {
 
-    forward = function(input, ...) {
+                env[[inputs]] <- args[[1]]
 
-      if (!is.null(forward_fn)) {
+            } else {
 
-        input <- forward_fn(self, input, ...)
-      }
+                for (nm in names(args)) env[[nm]] <- args[[nm]]
+            }
 
-      n_layer = length(sm$scorch_architecture) / 2
+            #- Compute each node
 
-      layer_types = sm$scorch_architecture[2 * (1:n_layer)] |> unlist()
+            for (i in seq_len(nrow(graph))) {
 
-      layer_index = which(layer_types == "layer")
+                node <- graph[i, ]
 
-      output = input
+                in_vals <- lapply(node$inputs[[1]], function(nm) env[[nm]])
 
-      i_layer = i_function = 1
+                out <- do.call(self[[node$name]], in_vals)
 
-      for(i in 1:n_layer) {
+                env[[node$name]] <- out
+            }
 
-        if(i %in% layer_index) {
+            #- Return outputs
 
-          output = self$modules[[i_layer]](output)
+            if (length(outputs) == 1) {
 
-          i_layer = i_layer + 1
+                env[[outputs]]
 
-        } else {
+            } else {
 
-          output = self$functions[[i_function]](output)
-
-          i_function = i_function + 1
+                purrr::map(outputs, ~ env[[.x]])
+            }
         }
-      }
+    )
 
-      return(output)
-    }
-  )
+    sm$nn_model <- mod()
 
-  return(list(nn_model = sm |> model(), dl = sm$dl))
+    sm$optimizer <- do.call(optimizer_fn,
+
+        c(list(params = sm$nn_model$parameters), optimizer_params)
+    )
+
+    sm$loss_fn <- loss_fn
+
+    sm$compiled <- TRUE
+
+    return(sm)
 }
 
 #=== HELPERS ===================================================================
