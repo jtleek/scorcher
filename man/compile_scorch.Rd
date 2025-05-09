@@ -4,44 +4,54 @@
 \alias{compile_scorch}
 \title{Compile a Scorch Model}
 \usage{
-compile_scorch(sm, init_fn = NULL, forward_fn = NULL, ...)
+compile_scorch(
+  sm,
+  loss_fn = nn_mse_loss(),
+  optimizer_fn = optim_adam,
+  optimizer_params = list(lr = 0.001)
+)
 }
 \arguments{
-\item{sm}{A scorch model architecture}
+\item{sm}{A \code{scorch_model} object built via \code{initiate_scorch()} and layers.}
 
-\item{init_fn}{An optional function for initializing the model's parameters.
-This function takes the model and additional arguments passed via \code{...}.}
+\item{loss_fn}{A loss function, e.g., \code{nn_mse_loss()} or named list of
+losses for multi-head models.}
 
-\item{forward_fn}{An optional function for customizing the forward pass of
-the model. This function takes the model, input data, and additional
-arguments passed via \code{...}.}
+\item{optimizer_fn}{Optimizer constructor, e.g., \code{optim_adam}.}
 
-\item{...}{Additional arguments passed to the \code{init_fn} and \code{forward_fn}.}
+\item{optimizer_params}{Named list of optimizer parameters
+(e.g., \code{list(lr = 1e-3)}).}
 }
 \value{
-A list containing:
-\describe{
-\item{nn_model}{The compiled \code{scorch} model object, ready for training.}
-\item{dl}{The associated scorch dataloader object.}
-}
+The same \code{scorch_model} with \code{nn_model}, \code{optimizer}, and \code{loss_fn}
+set, and \code{compiled = TRUE}.
 }
 \description{
-Compile a Scorch Model
+Traverse the topology defined in the scorch model graph to build a single
+\code{torch::nn_module}. Also attaches the specified loss function and optimizer.
 }
 \examples{
 
-input  <- mtcars |> as.matrix() |> torch::torch_tensor()
+dl <- scorch_create_dataloader(mtcars$wt, mtcars$mpg, batch_size=16)
 
-output <- mtcars |> as.matrix() |> torch::torch_tensor()
+sm <- dl |>
 
-dl <- scorch_create_dataloader(input, output, batch_size = 2)
+  initiate_scorch() |>
 
-scorch_model <- dl |> initiate_scorch() |>
+  scorch_input("wt") |>
 
-  scorch_layer("linear", 11, 5) |>
+  scorch_layer("h1", "linear", in_features = 1, out_features = 8) |>
 
-  scorch_layer("linear", 5, 2) |>
+  scorch_output("h1")
 
-  compile_scorch()
+sm <- compile_scorch(sm,
+
+  loss_fn = torch::nn_mse_loss(),
+
+  optimizer_fn = torch::optim_adam,
+
+  optimizer_params = list(lr=0.01))
+
+print(sm)
 
 }

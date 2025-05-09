@@ -70,7 +70,7 @@ print.scorch_model <- function(
 
                         inherits(mod$weight, "torch_tensor")) {
 
-                        paste(mod$weight$size(), collapse = "×")
+                        paste(mod$weight$size(), collapse = "x")
 
                     } else {
 
@@ -157,7 +157,7 @@ plot_scorch_model <- function(
 
             if (detailed && !is.null(mod$weight) && inherits(mod$weight, "torch_tensor")) {
 
-                dims_lbl <- paste0("\n(", paste(mod$weight$size(), collapse="×"), ")")
+                dims_lbl <- paste0("\n(", paste(mod$weight$size(), collapse="x"), ")")
             }
 
             shape <- if (nm %in% outputs) "doublecircle" else "box"

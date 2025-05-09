@@ -5,11 +5,7 @@
 \title{Fit a Scorch Model}
 \usage{
 fit_scorch(
-  scorch_model,
-  loss = nn_mse_loss,
-  loss_params = list(reduction = "mean"),
-  optim = optim_adam,
-  optim_params = list(lr = 0.001),
+  sm,
   num_epochs = 10,
   verbose = TRUE,
   preprocess_fn = NULL,
@@ -19,65 +15,47 @@ fit_scorch(
 )
 }
 \arguments{
-\item{scorch_model}{A scorch model object}
+\item{sm}{A compiled \code{scorch_model} (output of \link{compile_scorch}).}
 
-\item{loss}{A loss function from the torch package.
-Default is \code{nn_mse_loss}.}
+\item{num_epochs}{Integer number of training epochs.}
 
-\item{loss_params}{A list of parameters to pass to the loss function.
-Default is \code{list(reduction = "mean")}.}
+\item{verbose}{Logical; if \code{TRUE}, prints additional training details.}
 
-\item{optim}{An optimizer from the torch package.
-Default is \code{optim_adam}.}
+\item{preprocess_fn}{Optional function to transform batches before training.}
 
-\item{optim_params}{A list of parameters to pass to the optimizer.
-Default is \code{list(lr = 0.001)}.}
+\item{clip_grad}{One of \code{"norm"}, \code{"value"}, or \code{NULL} for gradient clipping.}
 
-\item{num_epochs}{The number of epochs to train for. Default is 10.}
+\item{clip_params}{Named list of clipping parameters
+(\code{max_norm} or \code{clip_value}).}
 
-\item{verbose}{A logical value indicating whether to print loss results at
-each epoch. Default is TRUE.}
-
-\item{preprocess_fn}{An optional function with additional, context specific
-steps to preprocess batches of data before training. The function must
-return a list containing at least \code{input} and \code{output}.}
-
-\item{clip_grad}{A character string specifying the gradient clipping
-strategy. Options are \code{"norm"} or \code{"value"}. Defaults to NULL (no clipping).}
-
-\item{clip_params}{A list of parameters for gradient clipping.
-\itemize{
-\item For \code{"norm"}: should include \code{max_norm} (a numeric value).
-\item For \code{"value"}: should include \code{clip_value} (a numeric value).
-}}
-
-\item{...}{Additional arguments passed to the \code{preprocess_fn}.}
+\item{...}{Additional arguments passed to the \code{preprocess_fn}, if provided.}
 }
 \value{
-A trained scorch model.
+The trained \code{scorch_model} with updated \code{nn_model} weights.
 }
 \description{
-Fit a Scorch Model
+Train a compiled scorch model for a given number of epochs. Supports either
+a single loss function (single-output) or a named list of loss functions
+(multi-head).
 }
 \examples{
 
-input  <- mtcars |> as.matrix() |> torch::torch_tensor()
+dl <- scorch_create_dataloader(mtcars$wt, mtcars$mpg, batch_size = 16)
 
-output <- mtcars |> as.matrix() |> torch::torch_tensor()
+sm <- dl |>
 
-dl <- scorch_create_dataloader(input, output, batch_size = 2)
+  initiate_scorch() |>
 
-scorch_model <- dl |> initiate_scorch() |>
+  scorch_input("wt") |>
 
-  scorch_layer("linear", 11, 5) |>
+  scorch_layer("h1", "linear", in_features = 1, out_features = 8) |>
 
-  scorch_layer("linear", 5, 2) |>
+  scorch_output("h1") |>
 
-  compile_scorch() |>
+  compile_scorch()
 
-  fit_scorch()
+sm <- fit_scorch(sm, num_epochs = 2, verbose = FALSE)
 
-first_batch <- head(dl)
+print(sm)
 
-test_output <- scorch_model(first_batch$input)
 }

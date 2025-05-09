@@ -4,24 +4,45 @@
 \alias{initiate_scorch}
 \title{Initiate a Scorch Model}
 \usage{
-initiate_scorch(dl)
+initiate_scorch(dl = NULL)
 }
 \arguments{
-\item{dl}{An input data loader, created with scorch_create_dataloader}
+\item{dl}{Optional dataloader created by \link{scorch_create_dataloader}
+to attach to the model (default is \code{NULL}).}
 }
 \value{
-A scorch model object
+A \code{scorch_model} object with the following components:
+
+\describe{
+\item{graph}{A tibble storing layer definitions in graph order.}
+\item{inputs}{Character vector of input node names.}
+\item{outputs}{Character vector of output node names.}
+\item{compiled}{Logical flag indicating if the model has been compiled.}
+\item{nn_model}{The compiled \code{torch::nn_module}, available once compiled.}
+\item{optimizer}{The optimizer object, available once compiled.}
+\item{loss_fn}{The loss function(s), available once compiled.}
+\item{dl}{The attached dataloader, if provided.}
+}
 }
 \description{
-Initiate a Scorch Model
+Creates a new \code{scorch_model} object to which you can add layers, inputs, and
+outputs.
+}
+\details{
+This function initializes an empty model graph and optionally attaches a
+dataloader created by \link{scorch_create_dataloader}.
 }
 \examples{
 
-input  <- mtcars |> as.matrix() |> torch::torch_tensor()
+dl <- scorch_create_dataloader(
 
-output <- mtcars |> as.matrix() |> torch::torch_tensor()
+    input  = mtcars$wt,
+    output = mtcars$mpg,
+    batch_size = 16
+)
 
-dl <- scorch_create_dataloader(input, output, batch_size = 2)
+sm <- initiate_scorch(dl)
 
-dl |> initiate_scorch()
+print(sm)
+
 }

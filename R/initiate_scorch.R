@@ -112,13 +112,13 @@ initiate_scorch <- function(
 #'
 #' @return The input object with the class attribute set to 'scorch_model'.
 #'
-#' @export
-#'
 #' @examples
 #'
-#' scorch_model <- create_scorch_model_class(list(scorch_architecture = list()))
+#' # scorch_model <- create_scorch_model_class(list(scorch_architecture = list()))
 #'
-#' class(scorch_model)
+#' # class(scorch_model)
+
+# @export
 
 create_scorch_model_class <- function(obj) {
 
@@ -136,21 +136,21 @@ create_scorch_model_class <- function(obj) {
 #'
 #' @param ... Additional arguments to be passed to the print function.
 #'
-#' @export
-#'
 #' @examples
 #'
-#' input  <- mtcars |> as.matrix() |> torch::torch_tensor()
+#' # input  <- mtcars |> as.matrix() |> torch::torch_tensor()
 #'
-#' output <- mtcars |> as.matrix() |> torch::torch_tensor()
+#' # output <- mtcars |> as.matrix() |> torch::torch_tensor()
 #'
-#' dl <- scorch_create_dataloader(input, output, batch_size = 2)
+#' # dl <- scorch_create_dataloader(input, output, batch_size = 2)
 #'
-#' scorch_model <- dl |> initiate_scorch() |>
+#' # scorch_model <- dl |> initiate_scorch() |>
 #'
-#'   scorch_layer("linear", 11, 5)
+#' #   scorch_layer("linear", 11, 5)
 #'
-#' print(scorch_model)
+#' # print(scorch_model)
+
+# @export
 
 print.scorch_model <- function(x, ...) {
 

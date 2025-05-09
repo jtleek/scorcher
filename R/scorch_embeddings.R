@@ -27,9 +27,13 @@
 #' architecture.
 #'
 #' @examples
-#' # Example usage:
+#'
+#' dl <- scorch_create_dataloader(mtcars$wt, mtcars$mpg, batch_size = 16)
+#'
 #' scorch_model <- dl |>
+#'
 #'   initiate_scorch() |>
+#'
 #'   scorch_embedding(size = 128, type = "sinusoidal", scale = 1)
 #'
 #' @export

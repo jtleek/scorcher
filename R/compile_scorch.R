@@ -50,9 +50,9 @@ utils::globalVariables(c("self", "aux"))
 #'
 #' sm <- compile_scorch(sm,
 #'
-#'   loss_fn = nn_mse_loss(),
+#'   loss_fn = torch::nn_mse_loss(),
 #'
-#'   optimizer_fn = optim_adam,
+#'   optimizer_fn = torch::optim_adam,
 #'
 #'   optimizer_params = list(lr=0.01))
 #'

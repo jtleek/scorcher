@@ -2,43 +2,49 @@
 % Please edit documentation in R/create_dataloader.R
 \name{scorch_create_dataloader}
 \alias{scorch_create_dataloader}
-\title{Create a New Dataloader for Building a Scorch Model}
+\title{Create a Scorch DataLoader}
 \usage{
 scorch_create_dataloader(
   input,
   output,
-  name = "dl",
   batch_size = 32,
-  shuffle = TRUE
+  shuffle = TRUE,
+  num_workers = 0,
+  pin_memory = FALSE,
+  ...
 )
 }
 \arguments{
-\item{input}{A tensor representing the input data (usually your predictors,
-first dimensions is index).}
+\item{input}{A torch tensor, R numeric vector, or named list thereof.}
 
-\item{output}{A tensor representing the output data (usually what you are
-predicting, first dimension is index).}
+\item{output}{A torch tensor, R numeric vector, or named list thereof.}
 
-\item{name}{A character string representing the name of the dataloader.
-Default is "dl".}
+\item{batch_size}{Integer batch size (default 32).}
 
-\item{batch_size}{An integer specifying the batch size. Default is 32.}
+\item{shuffle}{Logical; shuffle each epoch (default \code{TRUE}).}
 
-\item{shuffle}{A logical value indicating whether to shuffle the data.
-Default is TRUE.}
+\item{num_workers}{Number of worker processes (default 0).}
+
+\item{pin_memory}{Logical; pin memory (default \code{FALSE}).}
+
+\item{...}{Additional args passed to \code{torch::dataloader()}.}
 }
 \value{
-The dataloader with the specified batch size as a scorch_dataloader.
+A \code{torch::dataloader} with \verb{$input} and \verb{$output} named lists.
 }
 \description{
-This function creates a dataloader for building a scorch model from the
-given input and output tensors.
+Convert R vectors or tensors into a \code{torch::dataloader} with automatic dtype
+and dimension handling.
 }
 \examples{
 
-input  <- mtcars |> as.matrix() |> torch::torch_tensor()
+dl <- scorch_create_dataloader(
 
-output <- mtcars |> as.matrix() |> torch::torch_tensor()
+  input  = list(a = mtcars$hp, b = mtcars$disp),
+  output = mtcars$mpg,
+  batch_size = 8
+)
 
-dl <- scorch_create_dataloader(input, output, batch_size = 2)
+dl
+
 }

@@ -21,11 +21,11 @@ the first elements of the input and output data.
 }
 \examples{
 
-input  <- mtcars |> as.matrix() |> torch::torch_tensor()
+# input  <- mtcars |> as.matrix() |> torch::torch_tensor()
 
-output <- mtcars |> as.matrix() |> torch::torch_tensor()
+# output <- mtcars |> as.matrix() |> torch::torch_tensor()
 
-dl <- scorch_create_dataloader(input, output, batch_size = 2)
+# dl <- scorch_create_dataloader(input, output, batch_size = 2)
 
-head(dl)
+# head(dl)
 }

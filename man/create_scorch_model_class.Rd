@@ -13,11 +13,11 @@ create_scorch_model_class(obj)
 The input object with the class attribute set to 'scorch_model'.
 }
 \description{
-#' This function creates an object of class 'scorch_model'.
+This function creates an object of class 'scorch_model'.
 }
 \examples{
 
-scorch_model <- create_scorch_model_class(list(scorch_architecture = list()))
+# scorch_model <- create_scorch_model_class(list(scorch_architecture = list()))
 
-class(scorch_model)
+# class(scorch_model)
 }

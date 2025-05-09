@@ -12,8 +12,12 @@ RoxygenNote: 7.3.2
 Imports: 
     coro,
     crayon,
+    DiagrammeR,
     glue,
+    httr,
+    jsonlite,
     stringr,
+    tibble,
     torch,
     utils
 Config/Needs/website: rmarkdown

@@ -4,87 +4,50 @@
 \alias{scorch_layer}
 \title{Add a Layer to a Scorch Model}
 \usage{
-scorch_layer(
-  scorch_model,
-  layer_type,
-  in_features = NULL,
-  out_features = NULL,
-  use_residual = FALSE,
-  ...
-)
+scorch_layer(scorch_model, name, layer_fn, inputs = NULL, ...)
 }
 \arguments{
-\item{scorch_model}{A scorch model object to which the layer or block will
-be added.}
+\item{scorch_model}{A \code{scorch_model} object.}
 
-\item{layer_type}{A string or character vector specifying the type of
-layer to add (e.g., \code{c("conv2d", "gelu", "linear", "relu")}).
-Elements will be converted to the corresponding torch layer function
-(e.g., \code{nn_linear}, \code{nn_conv2d}).}
+\item{name}{Unique name for this layer node in the graph.}
 
-\item{in_features}{Optional. An integer specifying the number of input
-features for the layer. Used for layers such as \code{nn_linear}. Default
-is \code{NULL}.}
+\item{layer_fn}{Either a string prefix (e.g. "linear"), a full string name
+(e.g. "nn_linear"), an unquoted torch constructor (e.g., \code{linear}), or a
+\verb{torch::nn_*} function (e.g. \code{nn_linear}).}
 
-\item{out_features}{Optional. An integer specifying the number of output
-features for the layer. Used for layers such as \code{nn_linear}. Default
-is \code{NULL}.}
+\item{inputs}{Character vector of upstream node names. If \code{NULL}, uses the
+sole input (if no layers yet) or the last-built layer.}
 
-\item{use_residual}{Logical value indicating whether to use a residual
-connection. If \code{TRUE}, the function adds a residual block of the
-form \code{x + f(g(x))}. Default is \code{FALSE}.}
-
-\item{...}{Additional arguments passed to the layer constructors. These can
-include other required or optional parameters depending on the layer type.}
+\item{...}{Additional parameters passed to \code{layer_fn()} (e.g. \code{in_features},
+\code{out_features}, \code{kernel_size}).}
 }
 \value{
-Returns the updated scorch model with the new layer or block
-added to its architecture.
+The updated \code{scorch_model} with the new layer appended.
 }
 \description{
-This function adds a neural network layer or a residual block to a scorch
-model architecture. The layer can include a single activation or a series
-of layers specified by a vector of layer types.
-}
-\details{
-The \code{layer_type} argument can accept either a single string or a vector
-of strings. If a single string is provided, the function adds a single layer
-of the specified type to the model. For example, if
-\code{layer_type = "conv2d"}, the function will add a 2D convolutional layer.
-
-If a vector of strings is provided, the function creates a sequential block
-consisting of multiple layers, where each element in the vector specifies a
-layer or activation function to include in the block. For example, if
-\code{layer_type = c("conv2d", "gelu", "linear", "relu")}, the function will
-add a block that first applies a 2D convolution, then the GELU activation,
-followed by a linear layer, and finally the ReLU activation.
-
-When \code{use_residual = TRUE}, the function constructs a residual
-connection block of the form \code{x + f(g(x))}, where \code{f} and
-\code{g} represent the layers and activations specified by \code{layer_type}.
-
-A residual connection is a technique where the input to a block of layers
-is added directly to the block's output. This creates a shortcut path, or
-"skip connection," that allows the original input to bypass one or more
-layers. Residual connections are beneficial for training deep networks
-because they help mitigate the vanishing gradient problem by allowing
-gradients to flow more easily through the network.
+Append a new layer (module) to the \code{scorch_model} graph. The \code{layer_fn} can
+be a string (e.g., "linear", "nn_conv2d"), an unquoted torch constructor
+(e.g., \code{linear}), or a \verb{torch::nn_*} function (e.g. \code{nn_linear}).
 }
 \examples{
 
-input  <- mtcars |> as.matrix() |> torch::torch_tensor()
+dl <- scorch_create_dataloader(mtcars$wt, mtcars$mpg, batch_size=16)
 
-output <- mtcars |> as.matrix() |> torch::torch_tensor()
+sm <- dl |>
 
-dl <- scorch_create_dataloader(input, output, batch_size = 2)
+  initiate_scorch() |>
 
-scorch_model <- dl |> initiate_scorch() |>
+  scorch_input("wt") |>
 
-  scorch_layer(layer_type = "linear", 16, 32)
+  scorch_layer(
 
-scorch_model <- scorch_model |>
+    name = "h1",
+    layer_fn = "linear",
+    inputs = "wt",
+    in_features = 1,
+    out_features = 8
+  )
 
-  scorch_layer(layer_type = c("linear", "relu"),
+print(sm)
 
-   in_features = 16, out_features = 32, use_residual = TRUE)
 }

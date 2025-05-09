@@ -22,9 +22,6 @@
 #'
 #' @param sm A compiled `scorch_model` (output of \link{compile_scorch}).
 #'
-#' @param loss A loss function from the torch package.
-#' Default is `nn_mse_loss`.
-#'
 #' @param num_epochs Integer number of training epochs.
 #'
 #' @param verbose Logical; if `TRUE`, prints additional training details.
@@ -209,7 +206,7 @@ fit_scorch <- function(
 
             avg_loss <- total_loss / n_batches
 
-            cat(sprintf("Epoch %2d/%2d — avg loss: %.4f\n",
+            cat(sprintf("Epoch %2d/%2d - avg loss: %.4f\n",
 
                 epoch, num_epochs, avg_loss))
         }
