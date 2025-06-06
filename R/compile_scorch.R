@@ -31,7 +31,7 @@ utils::globalVariables(c("self", "aux"))
 #'
 #' input  <- mtcars |> as.matrix() |> torch::torch_tensor()
 #'
-#' output <- mtcars |> as.matrix() |> torch::torch_tensor()
+#' output <- mtcars[, 1:2] |> as.matrix() |> torch::torch_tensor()
 #'
 #' dl <- scorch_create_dataloader(input, output, batch_size = 2)
 #'
