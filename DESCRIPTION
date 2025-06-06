@@ -15,7 +15,10 @@ Imports:
     glue,
     stringr,
     torch,
-    utils
+    utils,
+    reticulate,
+    tensorflow,
+    tfdatasets
 Config/Needs/website: rmarkdown
 Suggests: 
     knitr,
