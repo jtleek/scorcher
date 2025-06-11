@@ -98,8 +98,6 @@ This function requires:
 
 \item \code{tfdatasets} for dataset operations
 
-\item \code{reticulate} for Python-R interface
-
 \item \code{torch} for tensor creation
 }
 }
@@ -132,5 +130,7 @@ custom_dataset <- scorch_tfrecord(
   output = file_list$outcome
 )
 }
+
+
 
 }

@@ -89,8 +89,6 @@
 #'
 #'   \item \code{tfdatasets} for dataset operations
 #'
-#'   \item \code{reticulate} for Python-R interface
-#'
 #'   \item \code{torch} for tensor creation
 #' }
 #'
@@ -123,11 +121,9 @@
 #' )
 #' }
 #'
-#' @importFrom reticulate iterate
+# @importFrom tensorflow tf
 #'
-#' @importFrom tensorflow tf
-#'
-#' @importFrom tfdatasets tfrecord_dataset dataset_map
+# @importFrom tfdatasets tfrecord_dataset dataset_map dataset_batch dataset_take as_array_iterator
 #'
 #' @export
 #'
@@ -135,7 +131,35 @@ scorch_tfrecord <- function(filepaths, input = "embedding", output,
 
                             dtype = "float32", verbose = TRUE) {
 
+  # ===== Dependency validation =====
+
+  if (!requireNamespace("tensorflow", quietly = TRUE)) {
+
+    stop("Package 'tensorflow' is required for scorch_tfrecord().
+
+         Please install it with: install.packages('tensorflow')")
+  }
+
+  if (!requireNamespace("tfdatasets", quietly = TRUE)) {
+
+    stop("Package 'tfdatasets' is required for scorch_tfrecord().
+
+         Please install it with: install.packages('tfdatasets')")
+  }
+
   # ===== Input validation =====
+
+  # Check for empty inputs
+
+  if (length(filepaths) == 0) {
+
+    stop(crayon::red("filepaths cannot be empty"))
+  }
+
+  if (length(output) == 0) {
+
+    stop(crayon::red("output cannot be empty"))
+  }
 
   # Map string dtype to tensorflow dtype
 
@@ -209,6 +233,13 @@ scorch_tfrecord <- function(filepaths, input = "embedding", output,
     stop(crayon::red("output must be numeric or integer vector"))
   }
 
+  # Check for invalid output values (NA, NaN, Inf)
+
+  if (any(!is.finite(output))) {
+
+    stop(crayon::red("output contains invalid values (NA, NaN, or Inf)"))
+  }
+
   # Check matching lengths
 
   if (length(filepaths) != length(output)) {
@@ -263,19 +294,36 @@ scorch_tfrecord <- function(filepaths, input = "embedding", output,
     tensorflow::tf$reshape(embedding_vector, shape = list(-1L))
   }
 
-  # Create and process dataset
+  # Try-catch wrapper for TensorFlow operations
 
-  tf_dataset <- tfdatasets::tfrecord_dataset(filepaths) |>
+  all_embeddings <- tryCatch({
 
-    tfdatasets::dataset_map(parse_embedding_fn)
+    # Create dataset
 
-  # Convert to R
+    tf_dataset <- tfdatasets::tfrecord_dataset(filepaths) |>
 
-  embedding_list <- reticulate::iterate(tf_dataset, f = function(x) x$numpy())
+      tfdatasets::dataset_map(parse_embedding_fn) |>
 
-  # Stack embeddings
+      tfdatasets::dataset_batch(length(filepaths))  # Batch all at once
 
-  all_embeddings <- do.call(rbind, embedding_list)
+    # Get the single batch containing all data
+
+    all_data <- tf_dataset |>
+
+      tfdatasets::dataset_take(1) |>
+
+      tfdatasets::as_array_iterator() |>
+
+      (\(x) x$`__next__`())()
+
+    # Convert to matrix
+
+    as.matrix(all_data)
+
+  }, error = function(e) {
+
+    stop(crayon::red("Error reading TFRecord files: ", e$message))
+  })
 
   #--- Check if the features were loaded properly
 
@@ -499,4 +547,3 @@ print.scorch_tfrecord <- function(x, ...) {
 }
 
 #=== END =======================================================================
-

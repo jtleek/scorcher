@@ -15,10 +15,7 @@ Imports:
     glue,
     stringr,
     torch,
-    utils,
-    reticulate,
-    tensorflow,
-    tfdatasets
+    utils
 Config/Needs/website: rmarkdown
 Suggests: 
     knitr,
@@ -26,5 +23,7 @@ Suggests:
     ggimage,
     palmerpenguins,
     datasauRus,
-    tidyverse
+    tidyverse,
+    tensorflow,
+    tfdatasets
 VignetteBuilder: knitr
