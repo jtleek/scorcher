@@ -139,7 +139,7 @@ scorch_layer <- function(scorch_model,
 
       #- Default to the last node in the graph.
 
-      inputs <- tail(scorch_model$graph$name, 1)
+      inputs <- utils::tail(scorch_model$graph$name, 1)
     }
   }
 

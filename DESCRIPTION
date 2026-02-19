@@ -12,9 +12,7 @@ RoxygenNote: 7.3.2
 Imports: 
     coro,
     crayon,
-    glue,
     purrr,
-    stringr,
     tibble,
     torch,
     utils
