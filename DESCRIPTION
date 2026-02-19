@@ -13,7 +13,9 @@ Imports:
     coro,
     crayon,
     glue,
+    purrr,
     stringr,
+    tibble,
     torch,
     utils
 Config/Needs/website: rmarkdown
