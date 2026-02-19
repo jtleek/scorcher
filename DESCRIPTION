@@ -13,9 +13,7 @@ Imports:
     coro,
     crayon,
     dplyr,
-    glue,
     purrr,
-    stringr,
     tibble,
     torch,
     utils

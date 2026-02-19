@@ -2,6 +2,8 @@
 # PRINT METHOD FOR SCORCH MODEL
 #===============================================================================
 
+
+utils::globalVariables(c("name", "inputs", "module_type", "dims"))
 #=== MAIN FUNCTION =============================================================
 
 #' Print a Scorch Model

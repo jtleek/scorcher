@@ -67,7 +67,7 @@ scorch_dropout <- function(scorch_model,
 
     } else {
 
-      inputs <- tail(scorch_model$graph$name, 1)
+      inputs <- utils::tail(scorch_model$graph$name, 1)
     }
   }
 
