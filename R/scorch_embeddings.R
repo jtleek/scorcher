@@ -17,7 +17,7 @@
 #' @param scale A scaling factor applied to the input before creating the
 #' embedding. Default is 1.0.
 #'
-#' @return A `SinusoidalEmbedding` object.
+#' @returns A `SinusoidalEmbedding` object.
 #'
 #' @examples
 #'
@@ -26,6 +26,8 @@
 #' emb <- SinusoidalEmbedding(8)
 #'
 #' emb(x)
+#'
+#' @family embeddings
 #'
 #' @export
 #'
@@ -67,7 +69,7 @@ SinusoidalEmbedding <- nn_module(
 #'
 #' @param scale A scaling factor applied to the input. Default is 1.0.
 #'
-#' @return A `LinearEmbedding` object.
+#' @returns A `LinearEmbedding` object.
 #'
 #' @examples
 #'
@@ -76,6 +78,8 @@ SinusoidalEmbedding <- nn_module(
 #' emb <- LinearEmbedding(8)
 #'
 #' emb(x)
+#'
+#' @family embeddings
 #'
 #' @export
 
@@ -106,7 +110,7 @@ LinearEmbedding <- nn_module(
 #'
 #' @param size The dimension of the embedding.
 #'
-#' @return A `LearnableEmbedding` object.
+#' @returns A `LearnableEmbedding` object.
 #'
 #' @examples
 #'
@@ -115,6 +119,8 @@ LinearEmbedding <- nn_module(
 #' emb <- LearnableEmbedding(8)
 #'
 #' emb(x)
+#'
+#' @family embeddings
 #'
 #' @export
 
@@ -140,7 +146,7 @@ LearnableEmbedding <- nn_module(
 #' The `IdentityEmbedding` module applies an identity transformation,
 #' effectively passing the input through without modification.
 #'
-#' @return An `IdentityEmbedding` object.
+#' @returns An `IdentityEmbedding` object.
 #'
 #' @examples
 #'
@@ -149,6 +155,8 @@ LearnableEmbedding <- nn_module(
 #' emb <- IdentityEmbedding()
 #'
 #' emb(x)
+#'
+#' @family embeddings
 #'
 #' @export
 
@@ -169,7 +177,7 @@ IdentityEmbedding <- nn_module(
 #' The `ZeroEmbedding` module generates a zero-valued embedding of the same
 #' size as the input, essentially nullifying the input data.
 #'
-#' @return A `ZeroEmbedding` object.
+#' @returns A `ZeroEmbedding` object.
 #'
 #' @examples
 #'
@@ -178,6 +186,8 @@ IdentityEmbedding <- nn_module(
 #' emb <- ZeroEmbedding()
 #'
 #' emb(x)
+#'
+#' @family embeddings
 #'
 #' @export
 
@@ -205,7 +215,7 @@ ZeroEmbedding <- nn_module(
 #'
 #' @param ... Additional parameters specific to the chosen embedding type.
 #'
-#' @return A `PositionalEmbedding` object.
+#' @returns A `PositionalEmbedding` object.
 #'
 #' @examples
 #'
@@ -216,6 +226,8 @@ ZeroEmbedding <- nn_module(
 #' emb(x)
 #'
 #' @references <https://github.com/tanelp/tiny-diffusion>
+#'
+#' @family embeddings
 #'
 #' @export
 
@@ -245,7 +257,7 @@ PositionalEmbedding <- nn_module(
 
     } else {
 
-      stop("Unknown positional embedding type: ", type)
+      stop("Unknown positional embedding type: ", type, call. = FALSE)
     }
   },
 
