@@ -79,6 +79,7 @@ utils::globalVariables("self")
 #'     optimizer_params = list(lr = 1e-3)
 #'   )
 #' }
+#' @import torch
 #'
 #' @family model construction
 #'
