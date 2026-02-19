@@ -1,261 +1,236 @@
 #===============================================================================
-# FUNCTIONS FOR CREATING DATALOADERS
+# FUNCTION TO CREATE A SCORCH DATALOADER
 #===============================================================================
 
 #=== MAIN FUNCTION =============================================================
 
-#' Create a New Dataloader for Building a Scorch Model
+#' Create a Scorch DataLoader for Multi-Input / Multi-Output Models
 #'
 #' @description
-#' This function creates a dataloader for building a scorch model from the
-#' given input and output tensors.
+#' Builds a \code{torch::dataloader} from input and output data. Accepts
+#' bare tensors, R arrays, or named lists for multi-input and
+#' multi-output architectures. Inputs are converted to float and outputs
+#' are converted to the appropriate dtype (long for classification,
+#' float for regression).
 #'
-#' @param input A tensor representing the input data (usually your predictors,
-#' first dimensions is index).
+#' @param input A torch tensor, R array, or named list thereof. For
+#'   multi-input models, pass a named list with one element per input
+#'   stream (e.g., \code{list(a = tensor_a, b = tensor_b)}).
 #'
-#' @param output A tensor representing the output data (usually what you are
-#' predicting, first dimension is index).
+#' @param output A torch tensor, R array, or named list thereof. For
+#'   multi-output models, pass a named list with one element per output
+#'   head.
 #'
-#' @param name A character string representing the name of the dataloader.
-#' Default is "dl".
+#' @param batch_size Integer. Batch size (default 32).
 #'
-#' @param batch_size An integer specifying the batch size. Default is 32.
+#' @param shuffle Logical. Shuffle each epoch? (default \code{TRUE}).
 #'
-#' @param shuffle A logical value indicating whether to shuffle the data.
-#' Default is TRUE.
+#' @param num_workers Integer. Number of worker processes for data
+#'   loading (default 0).
 #'
-#' @return The dataloader with the specified batch size as a scorch_dataloader.
+#' @param pin_memory Logical. Pin memory for faster GPU transfer
+#'   (default \code{FALSE}).
 #'
-#' @export
+#' @param ... Additional arguments passed to \code{torch::dataloader()}.
 #'
-#' @examples
+#' @returns A \code{torch::dataloader} yielding batches of the form
+#'   \code{list(input = <named list>, output = <named list>)}.
 #'
-#' input  <- mtcars |> as.matrix() |> torch::torch_tensor()
+#' @details
+#' Type conversion is handled automatically:
+#'   \describe{
+#'     \item{Inputs}{Cast to \code{torch_float()}. 3-D tensors (N, H, W)
+#'       gain a channel dimension (N, 1, H, W). 1-D tensors (N) become
+#'       (N, 1).}
+#'     \item{Outputs}{Integer vectors and 1-D long tensors are kept as
+#'       \code{torch_long()} for classification. Float vectors and tensors
+#'       are kept as \code{torch_float()} for regression. 1-D float
+#'       tensors are unsqueezed to (N, 1).}
+#'   }
 #'
-#' output <- mtcars |> as.matrix() |> torch::torch_tensor()
-#'
-#' dl <- scorch_create_dataloader(input, output, batch_size = 2)
-
-scorch_create_dataloader <- function(input, output,
-
-  name = "dl", batch_size = 32, shuffle = TRUE){
-
-  ## Check Input Arguments
-
-  stopifnot("`input` must be a tensor"  = ("torch_tensor" %in% class(input)))
-
-  stopifnot("`output` must be a tensor" = ("torch_tensor" %in% class(output)))
-
-  ## Set Up Dataset Creator Function
-
-  create_dataset <- torch::dataset(
-
-    name = name,
-
-    initialize = function(input, output, aux) {
-
-      self$input = input
-
-      self$output = output
-    },
-
-    .getitem = function(index) {
-
-      list(
-
-        input = self$input[index],
-
-        output = self$output[index])
-    },
-
-    .length = function() {
-
-      self$input$shape[1]
-    }
-  )
-
-  ## Create Dataset
-
-  ds <- create_dataset(input, output, aux)
-
-  ## Create the Dataloader
-
-  dl <- torch::dataloader(ds, batch_size = batch_size, shuffle = shuffle)
-
-  dl <- create_scorch_dataloader_class(dl)
-
-  return(dl)
-}
-
-#=== UTILITY FUNCTIONS =========================================================
-
-#--- SCORCH DATALOADER CLASS ---------------------------------------------------
-
-#' Create a Scorch Dataloader Class
-#'
-#' @description
-#' This function adds the class 'scorch_dataloader' to a given dataloader
-#' object.
-#'
-#' @param dl A dataloader object.
-#'
-#' @return The input dataloader object with the class attribute set to include
-#' 'scorch_dataloader'.
-#'
-#' @export
+#' Bare (non-list) inputs and outputs are wrapped in a single-element
+#' named list automatically.
 #'
 #' @examples
+#' \dontrun{
+#' # Single input / single output
+#' dl <- scorch_create_dataloader(
+#'   input  = torch::torch_randn(100, 10),
+#'   output = torch::torch_randn(100, 1),
+#'   batch_size = 32
+#' )
 #'
-#' input  <- mtcars |> as.matrix() |> torch::torch_tensor()
+#' # Multi-input for fusion models
+#' dl <- scorch_create_dataloader(
+#'   input  = list(a = tensor_a, b = tensor_b),
+#'   output = labels,
+#'   batch_size = 16
+#' )
+#' }
 #'
-#' output <- mtcars |> as.matrix() |> torch::torch_tensor()
-#'
-#' dl <- scorch_create_dataloader(input, output, batch_size = 2)
-#'
-#' scorch_dataloader <- create_scorch_dataloader_class(dl)
-#'
-#' class(scorch_dataloader)
-
-create_scorch_dataloader_class <- function(dl) {
-
-  tmp <- dl
-
-  class(tmp) <- c("scorch_dataloader", class(dl))
-
-  return(tmp)
-}
-
-#--- CALCULATE TENSOR DIMENSIONS -----------------------------------------------
-
-#' Calculate Dimensions of a Tensor
-#'
-#' @description
-#' Calculates the dimensions of a given tensor, returning a formatted string.
-#'
-#' @param tensor A tensor object.
-#'
-#' @return A string representing the dimensions of the tensor, excluding the
-#' batch dimension. If the tensor has only one dimension, returns 1.
+#' @family data loading
 #'
 #' @export
-#'
-#' @examples
-#'
-#' input <- mtcars |> as.matrix() |> torch::torch_tensor()
-#'
-#' calc_dim(input)
 
-calc_dim <- function(tensor) {
+scorch_create_dataloader <- function(input,
+                                     output,
+                                     batch_size  = 32,
+                                     shuffle     = TRUE,
+                                     num_workers = 0,
+                                     pin_memory  = FALSE,
+                                     ...) {
 
-  ndim = length(dim(tensor))
+  #- Wrap bare tensors/arrays into named lists.
 
-  if(ndim == 1) {
+  if (!is.list(input) || inherits(input, "torch_tensor")) {
 
-    return(1)
-
-  } else {
-
-    return(paste0(dim(tensor)[-1], collapse = " "))
+    input <- list(input = input)
   }
-}
 
-#=== METHODS ===================================================================
+  if (!is.list(output) || inherits(output, "torch_tensor")) {
 
-#--- HEAD ----------------------------------------------------------------------
+    output <- list(output = output)
+  }
 
-#' @importFrom utils head
-#' @export
-utils::head
+  #- Convert inputs to float, add channel dims as needed.
 
-#' Head Method for Scorch Dataloader
-#'
-#' @description
-#' Defines the head method for objects of class 'scorch_dataloader', returning
-#' the first elements of the input and output data.
-#'
-#' @param x An object of class 'scorch_dataloader'.
-#'
-#' @param ... Additional arguments to be passed to the head function.
-#'
-#' @return A list containing the first elements of the input and output data
-#' from the dataloader.
-#'
-#' @export
-#'
-#' @examples
-#'
-#' input  <- mtcars |> as.matrix() |> torch::torch_tensor()
-#'
-#' output <- mtcars |> as.matrix() |> torch::torch_tensor()
-#'
-#' dl <- scorch_create_dataloader(input, output, batch_size = 2)
-#'
-#' head(dl)
+  make_input_tensor <- function(x) {
 
-head.scorch_dataloader <- function(x, ...) {
+    t <- if (inherits(x, "torch_tensor")) {
 
-  val <- x$.iter()$.next()
+      x
 
-  return(
+    } else {
 
-    list(input  = head(val$input,  ...),
+      torch::torch_tensor(x, dtype = torch::torch_float())
+    }
 
-         output = head(val$output, ...))
+    #- Cast any non-float to float.
+
+    if (t$dtype != torch::torch_float()) {
+
+      t <- t$to(dtype = torch::torch_float())
+    }
+
+    #- Unsqueeze channel dim for images/features.
+
+    if (t$dim() == 3L) {
+
+      t <- t$unsqueeze(2)  # (N, H, W) -> (N, 1, H, W)
+
+    } else if (t$dim() == 1L) {
+
+      t <- t$unsqueeze(2)  # (N) -> (N, 1)
+    }
+
+    t
+  }
+
+  #- Convert outputs to long or float appropriately.
+
+  make_output_tensor <- function(x) {
+
+    if (inherits(x, "torch_tensor")) {
+
+      t <- x
+
+    } else if (is.integer(x)) {
+
+      t <- torch::torch_tensor(x, dtype = torch::torch_long())
+
+    } else {
+
+      t <- torch::torch_tensor(x, dtype = torch::torch_float())
+    }
+
+    #- Classification: 1-D long stays (N).
+
+    if (t$dtype == torch::torch_long() && t$dim() == 1L) {
+
+      return(t)
+    }
+
+    #- Regression single-output: 1-D float -> (N, 1).
+
+    if (t$dtype == torch::torch_float() && t$dim() == 1L) {
+
+      return(t$unsqueeze(2))
+    }
+
+    #- Regression multi-output: multi-dim float stays.
+
+    if (t$dtype == torch::torch_float() && t$dim() > 1L) {
+
+      return(t)
+    }
+
+    #- Multi-dim long (accidental int matrix): cast to float.
+
+    if (t$dtype == torch::torch_long() && t$dim() > 1L) {
+
+      return(t$to(dtype = torch::torch_float()))
+    }
+
+    t
+  }
+
+  #- Apply conversions.
+
+  input  <- lapply(input, make_input_tensor)
+
+  output <- lapply(output, make_output_tensor)
+
+  #- Define dataset.
+
+  scorch_ds <- torch::dataset(
+
+    name = "scorch_dataset",
+
+    initialize = function(input, output) {
+
+      self$input  <- input
+
+      self$output <- output
+
+      self$n <- input[[1]]$size()[1]
+    },
+
+    .getitem = function(i) {
+
+      slice <- function(x) {
+
+        if (x$dim() == 1L) {
+
+          x[i]
+
+        } else {
+
+          x$narrow(1, i, 1)$squeeze(1)
+        }
+      }
+
+      inp <- lapply(self$input, slice)
+
+      out <- lapply(self$output, slice)
+
+      list(input = inp, output = out)
+    },
+
+    .length = function() self$n
   )
-}
 
-#--- PRINT ---------------------------------------------------------------------
+  ds <- scorch_ds(input = input, output = output)
 
-#' Print Method for Scorch Dataloader
-#'
-#' @description
-#' Defines the print method for objects of class 'scorch_dataloader', providing
-#' a summary of its features.
-#'
-#' @param x An object of class 'scorch_dataloader'.
-#'
-#' @param ... Additional arguments to be passed to the print function.
-#'
-#' @return NULL. This function is called for its side effect of printing
-#' information about the dataloader.
-#'
-#' @export
-#'
-#' @examples
-#'
-#' input  <- mtcars |> as.matrix() |> torch::torch_tensor()
-#'
-#' output <- mtcars |> as.matrix() |> torch::torch_tensor()
-#'
-#' dl <- scorch_create_dataloader(input, output)
-#'
-#' print(dl)
+  #- Build dataloader.
 
-print.scorch_dataloader <- function(x, ...) {
-
-  cat("This is a dataloader object with features:\n")
-
-  cat(paste0(" * Batch size: ",
-
-    crayon::red(x$batch_size)))
-
-  cat("\n")
-
-  cat(paste0(" * Number of batches: ",
-
-    crayon::red(x$.length())))
-
-  cat("\n")
-
-  cat(paste0(" * Dimension of input tensors: ",
-
-    crayon::red(calc_dim(x$.iter()$.next()$input))))
-
-  cat("\n")
-
-  cat(paste0(" * Dimension of output tensors: ",
-
-    crayon::red(calc_dim(x$.iter()$.next()$output))))
+  torch::dataloader(
+    ds,
+    batch_size  = batch_size,
+    shuffle     = shuffle,
+    num_workers = num_workers,
+    pin_memory  = pin_memory,
+    ...
+  )
 }
 
 #=== END =======================================================================
