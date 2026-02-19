@@ -12,18 +12,22 @@ RoxygenNote: 7.3.2
 Imports: 
     coro,
     crayon,
+    dplyr,
     glue,
+    purrr,
     stringr,
+    tibble,
     torch,
     utils
 Config/Needs/website: rmarkdown
 Suggests: 
-    knitr,
-    rmarkdown,
-    ggimage,
-    palmerpenguins,
     datasauRus,
-    tidyverse,
+    DiagrammeR,
+    ggimage,
+    knitr,
+    palmerpenguins,
+    rmarkdown,
     tensorflow,
-    tfdatasets
+    tfdatasets,
+    tidyverse
 VignetteBuilder: knitr
