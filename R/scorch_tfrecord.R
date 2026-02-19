@@ -380,6 +380,7 @@ create_scorch_tfrecord_class <- function(obj) {
 #'
 #' @returns A list containing the first elements of the input and output tensors.
 #'
+#' @importFrom utils head
 #' @export
 #'
 #' @examples

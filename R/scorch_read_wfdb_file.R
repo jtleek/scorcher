@@ -589,6 +589,7 @@ create_scorch_wfdb_class <- function(obj) {
 #'   first \code{n} columns. If \code{x$success} is \code{FALSE}, returns
 #'   \code{NULL} with a message.
 #'
+#' @importFrom utils head
 #' @export
 #'
 #' @examples
