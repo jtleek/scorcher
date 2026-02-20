@@ -15,9 +15,10 @@
 #' @param scorch_model A \code{scorch_model} object created by
 #'   \code{\link{initiate_scorch}}.
 #'
-#' @param outputs A character vector of one or more node names from
-#'   the model graph. Each name must correspond to a node added by
-#'   \code{\link{scorch_layer}} or a similar function.
+#' @param outputs A character vector of node names to designate as
+#'   model outputs. These names must match existing nodes in the
+#'   graph. For single-output models, pass one name. For multi-output
+#'   models, pass multiple (e.g., \code{c("cls_head", "reg_head")}).
 #'
 #' @returns The updated \code{scorch_model} with its \code{outputs}
 #'   field set to \code{outputs}.

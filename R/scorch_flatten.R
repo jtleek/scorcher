@@ -14,8 +14,14 @@
 #' @param scorch_model A \code{scorch_model} object created by
 #'   \code{\link{initiate_scorch}}.
 #'
-#' @param name A single character string giving a unique name for this
-#'   node in the computation graph.
+#' @param name A unique character string identifying this node in the
+#'   model graph. Names wire the computation graph -- other nodes
+#'   reference them via their \code{inputs} argument to define
+#'   branching, fusion, and skip connections. Names are arbitrary but
+#'   appear in error messages and \code{\link{plot_scorch_model}}
+#'   output. Common prefixes: \code{"fc"} (linear), \code{"conv"}
+#'   (convolution), \code{"act"} (activation). Use number suffixes
+#'   for multiples (e.g., \code{"fc1"}, \code{"fc2"}).
 #'
 #' @param inputs Character vector of upstream node names. If \code{NULL}
 #'   (default), resolved automatically (last node or sole input).
