@@ -16,9 +16,10 @@
 #' @param scorch_model A \code{scorch_model} object created by
 #'   \code{\link{initiate_scorch}}.
 #'
-#' @param name A single character string giving a unique name for this
-#'   input. Downstream layers reference this name via their \code{inputs}
-#'   argument.
+#' @param name A unique character string naming this input stream.
+#'   Other nodes reference this name via their \code{inputs} argument
+#'   to receive data from this input. For multi-input models, each
+#'   input needs a distinct name (e.g., \code{"cxr"}, \code{"ekg"}).
 #'
 #' @returns The updated \code{scorch_model} with \code{name} appended to
 #'   its \code{inputs} field.
