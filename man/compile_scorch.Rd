@@ -4,44 +4,102 @@
 \alias{compile_scorch}
 \title{Compile a Scorch Model}
 \usage{
-compile_scorch(sm, init_fn = NULL, forward_fn = NULL, ...)
+compile_scorch(
+  sm,
+  loss_fn = torch::nn_mse_loss(),
+  optimizer_fn = torch::optim_adam,
+  optimizer_params = list(lr = 0.001)
+)
 }
 \arguments{
-\item{sm}{A scorch model architecture}
+\item{sm}{A \code{scorch_model} object built with
+\code{\link{initiate_scorch}}, \code{\link{scorch_input}},
+\code{\link{scorch_layer}}, and \code{\link{scorch_output}}.}
 
-\item{init_fn}{An optional function for initializing the model's parameters.
-This function takes the model and additional arguments passed via \code{...}.}
+\item{loss_fn}{A loss function or a named list of loss functions.
+For single-output models, pass a single loss (e.g.,
+\code{torch::nn_mse_loss()}). For multi-output models, pass a
+named list with one entry per output node (e.g.,
+\code{list(reg_head = nn_mse_loss(), cls_head = nn_cross_entropy_loss())}).}
 
-\item{forward_fn}{An optional function for customizing the forward pass of
-the model. This function takes the model, input data, and additional
-arguments passed via \code{...}.}
+\item{optimizer_fn}{An optimizer constructor function (e.g.,
+\code{torch::optim_adam}, \code{torch::optim_sgd}). Not an
+instantiated optimizer -- the constructor is called internally
+with the model parameters.}
 
-\item{...}{Additional arguments passed to the \code{init_fn} and \code{forward_fn}.}
+\item{optimizer_params}{A named list of optimizer parameters (e.g.,
+\code{list(lr = 1e-3, weight_decay = 1e-4)}). Passed to
+\code{optimizer_fn} along with the model parameters.}
 }
 \value{
-A list containing:
+The same \code{scorch_model} object with the following
+fields populated:
 \describe{
-\item{nn_model}{The compiled \code{scorch} model object, ready for training.}
-\item{dl}{The associated scorch dataloader object.}
+\item{\code{nn_model}}{The compiled \code{torch::nn_module}.}
+\item{\code{optimizer}}{The instantiated optimizer.}
+\item{\code{loss_fn}}{The loss function (or named list).}
+\item{\code{compiled}}{Set to \code{TRUE}.}
 }
 }
 \description{
-Compile a Scorch Model
+Compiles a Scorch model by traversing the graph topology to build a
+\code{torch::nn_module}, then attaches an optimizer and loss function.
+After compilation, the model is ready for training with
+\code{\link{fit_scorch}}.
+}
+\details{
+Compilation works by:
+\enumerate{
+\item Registering every graph node as a sub-module of a new
+\code{nn_module}. This enables torch to track all learnable
+parameters.
+\item Building a \code{forward()} method that traverses the
+graph in row order, passing each node its upstream tensors
+via a name-lookup environment.
+\item Instantiating the optimizer with the model parameters.
+}
+
+The graph must have at least one input (\code{\link{scorch_input}})
+and one output (\code{\link{scorch_output}}) declared before
+compilation.
 }
 \examples{
+\dontrun{
+# Single-output model
+model <- model |>
+  compile_scorch(
+    loss_fn          = torch::nn_mse_loss(),
+    optimizer_fn     = torch::optim_adam,
+    optimizer_params = list(lr = 1e-3)
+  )
 
-input  <- mtcars |> as.matrix() |> torch::torch_tensor()
-
-output <- mtcars[, 1:2] |> as.matrix() |> torch::torch_tensor()
-
-dl <- scorch_create_dataloader(input, output, batch_size = 2)
-
-scorch_model <- dl |> initiate_scorch() |>
-
-  scorch_layer("linear", 11, 5) |>
-
-  scorch_layer("linear", 5, 2) |>
-
-  compile_scorch()
-
+# Multi-output model
+model <- model |>
+  compile_scorch(
+    loss_fn = list(
+      reg_head = torch::nn_mse_loss(),
+      cls_head = torch::nn_cross_entropy_loss()
+    ),
+    optimizer_fn     = torch::optim_adam,
+    optimizer_params = list(lr = 1e-3)
+  )
 }
+}
+\seealso{
+Other model construction: 
+\code{\link{initiate_scorch}()},
+\code{\link{plot_scorch_model}()},
+\code{\link{print.scorch_model}()},
+\code{\link{scorch_add_skip}()},
+\code{\link{scorch_attention}()},
+\code{\link{scorch_batchnorm}()},
+\code{\link{scorch_concat}()},
+\code{\link{scorch_dropout}()},
+\code{\link{scorch_flatten}()},
+\code{\link{scorch_function}()},
+\code{\link{scorch_input}()},
+\code{\link{scorch_layer}()},
+\code{\link{scorch_output}()},
+\code{\link{scorch_transformer_encoder}()}
+}
+\concept{model construction}

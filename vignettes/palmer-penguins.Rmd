@@ -37,7 +37,7 @@ This vignette demonstrates how to use the `scorcher` package to fit a neural net
 
 Before we begin, ensure that you have the necessary packages installed. You can install them using the following commands:
 
-```{r install, eval = F}
+```{r install, eval = FALSE}
 install.packages("tidyverse")
 install.packages("ggimage")
 install.packages("torch")
@@ -150,18 +150,14 @@ dl <- scorch_create_dataloader(x_train, y_train, batch_size = 32)
 
 # Define the neural network
 
-scorch_model <- dl |> 
-  initiate_scorch() |> 
-  scorch_layer("linear", 7, 16) |> 
-  scorch_layer("relu") |>
-  scorch_layer("linear", 16, 8) |> 
-  scorch_layer("relu") |>
-  scorch_layer("linear", 8, 3)
-
-# Compile the neural network
-
-compiled_scorch_model <- scorch_model |>
-  compile_scorch()
+scorch_model <- initiate_scorch(dl) |>
+  scorch_input("x") |>
+  scorch_layer("fc1", "linear", in_features = 7, out_features = 16) |>
+  scorch_layer("act1", "relu") |>
+  scorch_layer("fc2", "linear", in_features = 16, out_features = 8) |>
+  scorch_layer("act2", "relu") |>
+  scorch_layer("fc3", "linear", in_features = 8, out_features = 3) |>
+  scorch_output("fc3")
 ```
 
 ### Training the Neural Network
@@ -176,14 +172,19 @@ weight <- length(train_data$species) /
 
 weight <- weight$squeeze()
 
+# Compile the neural network
+
+scorch_model <- scorch_model |>
+  compile_scorch(
+    loss_fn          = nn_cross_entropy_loss(weight = weight),
+    optimizer_fn     = optim_adam,
+    optimizer_params = list(lr = 0.001)
+  )
+
 # Fit the neural network
 
-fitted_scorch_model <- compiled_scorch_model |> 
-  fit_scorch(
-    loss = nn_cross_entropy_loss,
-    loss_params = list(weight = weight),
-    num_epochs = 200, 
-    verbose = F)
+scorch_model <- scorch_model |>
+  fit_scorch(num_epochs = 200, verbose = FALSE)
 ```
 
 ### Evaluating the Model
@@ -192,12 +193,12 @@ Finally, we'll evaluate our model on the test data.
 
 ```{r}
 
-fitted_scorch_model$eval()
+scorch_model$nn_model$eval()
 
 x_test <- torch_tensor(as.matrix(test_data[, -1]), dtype = torch_float())
 y_test <- torch_tensor(as.integer(test_data$species), dtype = torch_long())
 
-output <- fitted_scorch_model(x_test)
+output <- scorch_model$nn_model(x_test)
 pred <- torch_argmax(output, dim = 2)
 
 accuracy <- sum(pred == y_test)$item() / length(y_test)

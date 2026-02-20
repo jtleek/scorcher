@@ -22,3 +22,10 @@ the forward pass of the Scorch 2D diffusion model. It processes the input
 data and time step into embeddings and concatenates them for further
 processing in the model.
 }
+\seealso{
+Other diffusion: 
+\code{\link{NoiseScheduler}()},
+\code{\link{scorch_2d_diffusion_init}()},
+\code{\link{scorch_2d_diffusion_train}()}
+}
+\concept{diffusion}

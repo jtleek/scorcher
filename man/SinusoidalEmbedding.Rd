@@ -29,3 +29,12 @@ emb <- SinusoidalEmbedding(8)
 emb(x)
 
 }
+\seealso{
+Other embeddings: 
+\code{\link{IdentityEmbedding}()},
+\code{\link{LearnableEmbedding}()},
+\code{\link{LinearEmbedding}()},
+\code{\link{PositionalEmbedding}()},
+\code{\link{ZeroEmbedding}()}
+}
+\concept{embeddings}

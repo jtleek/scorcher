@@ -4,24 +4,89 @@
 \alias{initiate_scorch}
 \title{Initiate a Scorch Model}
 \usage{
-initiate_scorch(dl)
+initiate_scorch(dl = NULL)
 }
 \arguments{
-\item{dl}{An input data loader, created with scorch_create_dataloader}
+\item{dl}{Optional \code{torch::dataloader} to attach to the model.
+If \code{NULL} (default), no dataloader is attached and one can be
+added later. If provided, it must inherit from \code{"dataloader"}.}
 }
 \value{
-A scorch model object
+A \code{scorch_model} object (a list with class
+\code{"scorch_model"}) containing the following fields:
+
+\describe{
+\item{\code{graph}}{A tibble with columns \code{name} (character),
+\code{module} (list of \code{nn_module} objects), and \code{inputs}
+(list of character vectors). Starts empty; rows are added by
+\code{\link{scorch_layer}} and related functions.}
+\item{\code{inputs}}{Character vector of input node names, set by
+\code{\link{scorch_input}}.}
+\item{\code{outputs}}{Character vector of output node names, set by
+\code{\link{scorch_output}}.}
+\item{\code{compiled}}{Logical. \code{FALSE} until
+\code{\link{compile_scorch}} is called.}
+\item{\code{nn_model}}{The compiled \code{torch::nn_module}, or
+\code{NULL} before compilation.}
+\item{\code{optimizer}}{The optimizer object, or \code{NULL} before
+compilation.}
+\item{\code{loss_fn}}{The loss function (or named list of loss
+functions), or \code{NULL} before compilation.}
+\item{\code{dl}}{The attached \code{torch::dataloader}, or
+\code{NULL} if none was provided.}
+}
 }
 \description{
-Initiate a Scorch Model
+Creates an empty Scorch model object with a graph-based architecture.
+This is the first step in the scorcher pipeline: it initializes the
+data structure that subsequent functions (\code{\link{scorch_input}},
+\code{\link{scorch_layer}}, \code{\link{scorch_output}},
+\code{\link{compile_scorch}}) build upon.
+}
+\details{
+The Scorch model uses a graph-based architecture stored as a tibble.
+Each row represents a named node in the computation graph, holding its
+\code{nn_module} and a character vector of upstream node names. This
+allows scorcher to represent complex architectures including multi-input
+models, branching paths, skip connections, and multi-output heads.
+
+A typical pipeline looks like:
+
+\preformatted{
+model <- initiate_scorch(dl) |>
+  scorch_input("input") |>
+  scorch_layer("fc1", "linear", in_features = 10, out_features = 32) |>
+  scorch_layer("act1", "relu") |>
+  scorch_layer("fc2", "linear", in_features = 32, out_features = 1) |>
+  scorch_output("fc2") |>
+  compile_scorch()
+}
 }
 \examples{
+\dontrun{
+# With a dataloader
+model <- initiate_scorch(dl)
 
-input  <- mtcars |> as.matrix() |> torch::torch_tensor()
-
-output <- mtcars |> as.matrix() |> torch::torch_tensor()
-
-dl <- scorch_create_dataloader(input, output, batch_size = 2)
-
-dl |> initiate_scorch()
+# Without a dataloader (attach later)
+model <- initiate_scorch()
 }
+
+}
+\seealso{
+Other model construction: 
+\code{\link{compile_scorch}()},
+\code{\link{plot_scorch_model}()},
+\code{\link{print.scorch_model}()},
+\code{\link{scorch_add_skip}()},
+\code{\link{scorch_attention}()},
+\code{\link{scorch_batchnorm}()},
+\code{\link{scorch_concat}()},
+\code{\link{scorch_dropout}()},
+\code{\link{scorch_flatten}()},
+\code{\link{scorch_function}()},
+\code{\link{scorch_input}()},
+\code{\link{scorch_layer}()},
+\code{\link{scorch_output}()},
+\code{\link{scorch_transformer_encoder}()}
+}
+\concept{model construction}

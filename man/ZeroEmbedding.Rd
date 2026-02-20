@@ -22,3 +22,12 @@ emb <- ZeroEmbedding()
 emb(x)
 
 }
+\seealso{
+Other embeddings: 
+\code{\link{IdentityEmbedding}()},
+\code{\link{LearnableEmbedding}()},
+\code{\link{LinearEmbedding}()},
+\code{\link{PositionalEmbedding}()},
+\code{\link{SinusoidalEmbedding}()}
+}
+\concept{embeddings}

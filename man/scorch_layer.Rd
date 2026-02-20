@@ -2,90 +2,101 @@
 % Please edit documentation in R/scorch_layer.R
 \name{scorch_layer}
 \alias{scorch_layer}
-\title{Add a Layer to a Scorch Model}
+\title{Add a Layer Node to a Scorch Model}
 \usage{
-scorch_layer(
-  scorch_model,
-  layer_type,
-  in_features = NULL,
-  out_features = NULL,
-  use_residual = FALSE,
-  ...
-)
+scorch_layer(scorch_model, name, layer_fn, inputs = NULL, ...)
 }
 \arguments{
-\item{scorch_model}{A scorch model object to which the layer or block will
-be added.}
+\item{scorch_model}{A \code{scorch_model} object created by
+\code{\link{initiate_scorch}}.}
 
-\item{layer_type}{A string or character vector specifying the type of
-layer to add (e.g., \code{c("conv2d", "gelu", "linear", "relu")}).
-Elements will be converted to the corresponding torch layer function
-(e.g., \code{nn_linear}, \code{nn_conv2d}).}
+\item{name}{A unique character string identifying this node in the
+model graph. Names wire the computation graph -- other nodes
+reference them via their \code{inputs} argument to define
+branching, fusion, and skip connections. Names are arbitrary but
+appear in error messages and \code{\link{plot_scorch_model}}
+output. Common prefixes: \code{"fc"} (linear), \code{"conv"}
+(convolution), \code{"act"} (activation). Use number suffixes
+for multiples (e.g., \code{"fc1"}, \code{"fc2"}).}
 
-\item{in_features}{Optional. An integer specifying the number of input
-features for the layer. Used for layers such as \code{nn_linear}. Default
-is \code{NULL}.}
+\item{layer_fn}{The layer to add. Can be specified in three ways:
+\enumerate{
+\item A string: \code{"linear"}, \code{"conv2d"}, \code{"relu"}.
+The \code{nn_} prefix is added automatically if missing.
+\item An unquoted name: \code{linear}, \code{conv2d}.
+Resolved the same way as a string.
+\item A function: \code{torch::nn_linear}, or any \code{nn_module}
+constructor. Used as-is.
+}}
 
-\item{out_features}{Optional. An integer specifying the number of output
-features for the layer. Used for layers such as \code{nn_linear}. Default
-is \code{NULL}.}
+\item{inputs}{Character vector of upstream node names that feed into
+this layer. If \code{NULL} (default), inputs are resolved
+automatically: the last node in the graph is used, or, if the graph
+is empty, the sole input declared via \code{\link{scorch_input}}.
+Must be specified explicitly when the model has multiple inputs and
+the graph is empty.}
 
-\item{use_residual}{Logical value indicating whether to use a residual
-connection. If \code{TRUE}, the function adds a residual block of the
-form \code{x + f(g(x))}. Default is \code{FALSE}.}
-
-\item{...}{Additional arguments passed to the layer constructors. These can
-include other required or optional parameters depending on the layer type.}
+\item{...}{Additional arguments passed to the \code{layer_fn}
+constructor (e.g., \code{in_features}, \code{out_features},
+\code{kernel_size}, \code{p}).}
 }
 \value{
-Returns the updated scorch model with the new layer or block
-added to its architecture.
+The updated \code{scorch_model} with a new row appended to
+its \code{graph} tibble.
 }
 \description{
-This function adds a neural network layer or a residual block to a scorch
-model architecture. The layer can include a single activation or a series
-of layers specified by a vector of layer types.
+Adds a named layer node to the Scorch model graph. The layer is
+instantiated from a torch \code{nn_*} constructor and wired to one
+or more upstream nodes. This is the primary function for building
+model architectures in scorcher.
 }
 \details{
-The \code{layer_type} argument can accept either a single string or a vector
-of strings. If a single string is provided, the function adds a single layer
-of the specified type to the model. For example, if
-\code{layer_type = "conv2d"}, the function will add a 2D convolutional layer.
+Each call appends one row to the graph tibble with columns
+\code{name}, \code{module} (the instantiated \code{nn_module}), and
+\code{inputs} (character vector of upstream node names). The graph
+topology is later traversed by \code{\link{compile_scorch}} to
+build the forward pass.
 
-If a vector of strings is provided, the function creates a sequential block
-consisting of multiple layers, where each element in the vector specifies a
-layer or activation function to include in the block. For example, if
-\code{layer_type = c("conv2d", "gelu", "linear", "relu")}, the function will
-add a block that first applies a 2D convolution, then the GELU activation,
-followed by a linear layer, and finally the ReLU activation.
-
-When \code{use_residual = TRUE}, the function constructs a residual
-connection block of the form \code{x + f(g(x))}, where \code{f} and
-\code{g} represent the layers and activations specified by \code{layer_type}.
-
-A residual connection is a technique where the input to a block of layers
-is added directly to the block's output. This creates a shortcut path, or
-"skip connection," that allows the original input to bypass one or more
-layers. Residual connections are beneficial for training deep networks
-because they help mitigate the vanishing gradient problem by allowing
-gradients to flow more easily through the network.
+For residual / skip connections, use \code{\link{scorch_add_skip}}
+instead of the old \code{use_residual} argument.
 }
 \examples{
+\dontrun{
+# String (most common)
+model <- model |>
+  scorch_layer("fc1", "linear", in_features = 10, out_features = 32)
 
-input  <- mtcars |> as.matrix() |> torch::torch_tensor()
+# Unquoted symbol
+model <- model |>
+  scorch_layer("act1", relu)
 
-output <- mtcars |> as.matrix() |> torch::torch_tensor()
+# Direct nn_module constructor
+model <- model |>
+  scorch_layer("fc2", torch::nn_linear,
+               in_features = 32, out_features = 1)
 
-dl <- scorch_create_dataloader(input, output, batch_size = 2)
-
-scorch_model <- dl |> initiate_scorch() |>
-
-  scorch_layer(layer_type = "linear", 16, 32)
-
-scorch_model <- scorch_model |>
-
-  scorch_layer(layer_type = c("linear", "relu"),
-
-   in_features = 16, out_features = 32, use_residual = TRUE)
+# Explicit input wiring (for multi-input models)
+model <- model |>
+  scorch_layer("branch_a", "linear", inputs = "stream_a",
+               in_features = 10, out_features = 16)
+}
 
 }
+\seealso{
+Other model construction: 
+\code{\link{compile_scorch}()},
+\code{\link{initiate_scorch}()},
+\code{\link{plot_scorch_model}()},
+\code{\link{print.scorch_model}()},
+\code{\link{scorch_add_skip}()},
+\code{\link{scorch_attention}()},
+\code{\link{scorch_batchnorm}()},
+\code{\link{scorch_concat}()},
+\code{\link{scorch_dropout}()},
+\code{\link{scorch_flatten}()},
+\code{\link{scorch_function}()},
+\code{\link{scorch_input}()},
+\code{\link{scorch_output}()},
+\code{\link{scorch_transformer_encoder}()}
+}
+\concept{model construction}

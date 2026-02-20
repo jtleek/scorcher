@@ -5,11 +5,7 @@
 \title{Fit a Scorch Model}
 \usage{
 fit_scorch(
-  scorch_model,
-  loss = nn_mse_loss,
-  loss_params = list(reduction = "mean"),
-  optim = optim_adam,
-  optim_params = list(lr = 0.001),
+  sm,
   num_epochs = 10,
   verbose = TRUE,
   preprocess_fn = NULL,
@@ -19,65 +15,67 @@ fit_scorch(
 )
 }
 \arguments{
-\item{scorch_model}{A scorch model object}
+\item{sm}{A compiled \code{scorch_model} object. Must have been
+processed by \code{\link{compile_scorch}} before fitting.}
 
-\item{loss}{A loss function from the torch package.
-Default is \code{nn_mse_loss}.}
+\item{num_epochs}{Integer. Number of training epochs (default 10).}
 
-\item{loss_params}{A list of parameters to pass to the loss function.
-Default is \code{list(reduction = "mean")}.}
+\item{verbose}{Logical. If \code{TRUE} (default), prints average
+loss after each epoch.}
 
-\item{optim}{An optimizer from the torch package.
-Default is \code{optim_adam}.}
+\item{preprocess_fn}{Optional function for custom batch
+preprocessing. Receives a batch and \code{...}, must return a
+list with \code{input} and \code{output} elements.}
 
-\item{optim_params}{A list of parameters to pass to the optimizer.
-Default is \code{list(lr = 0.001)}.}
+\item{clip_grad}{Character string specifying gradient clipping
+strategy: \code{"norm"} for max-norm clipping, \code{"value"}
+for value clipping, or \code{NULL} (default) for no clipping.}
 
-\item{num_epochs}{The number of epochs to train for. Default is 10.}
+\item{clip_params}{Named list of clipping parameters. For
+\code{"norm"}: \code{list(max_norm = 1.0)}. For \code{"value"}:
+\code{list(clip_value = 0.5)}.}
 
-\item{verbose}{A logical value indicating whether to print loss results at
-each epoch. Default is TRUE.}
-
-\item{preprocess_fn}{An optional function with additional, context specific
-steps to preprocess batches of data before training. The function must
-return a list containing at least \code{input} and \code{output}.}
-
-\item{clip_grad}{A character string specifying the gradient clipping
-strategy. Options are \code{"norm"} or \code{"value"}. Defaults to NULL (no clipping).}
-
-\item{clip_params}{A list of parameters for gradient clipping.
-\itemize{
-\item For \code{"norm"}: should include \code{max_norm} (a numeric value).
-\item For \code{"value"}: should include \code{clip_value} (a numeric value).
-}}
-
-\item{...}{Additional arguments passed to the \code{preprocess_fn}.}
+\item{...}{Additional arguments passed to \code{preprocess_fn}.}
 }
 \value{
-A trained scorch model.
+The trained \code{scorch_model} with its \code{nn_model}
+weights updated in place.
 }
 \description{
-Fit a Scorch Model
+Trains a compiled Scorch model using the attached dataloader,
+optimizer, and loss function. Supports single-output and
+multi-output (multi-head) architectures.
+}
+\details{
+The training loop performs the following for each epoch:
+\enumerate{
+\item Iterates over batches from the attached dataloader.
+\item Moves inputs and targets to the appropriate device
+(CUDA if available, otherwise CPU).
+\item Computes predictions via the forward pass.
+\item Computes loss -- either a single loss function or the
+sum of per-output losses for multi-head models.
+\item Backpropagates and updates parameters.
+}
+
+For multi-output models, \code{compile_scorch} must have received
+a named list of loss functions matching the output node names.
+The total loss is the sum across all outputs.
 }
 \examples{
+\dontrun{
+# Basic training
+model <- fit_scorch(model, num_epochs = 20)
 
-input  <- mtcars |> as.matrix() |> torch::torch_tensor()
-
-output <- mtcars[, 1:2] |> as.matrix() |> torch::torch_tensor()
-
-dl <- scorch_create_dataloader(input, output, batch_size = 2)
-
-scorch_model <- dl |> initiate_scorch() |>
-
-  scorch_layer("linear", 11, 5) |>
-
-  scorch_layer("linear", 5, 2) |>
-
-  compile_scorch() |>
-
-  fit_scorch()
-
-first_batch <- head(dl)
-
-test_output <- scorch_model(first_batch$input)
+# With gradient clipping and custom preprocessing
+model <- fit_scorch(
+  model,
+  num_epochs    = 50,
+  preprocess_fn = my_preprocess,
+  clip_grad     = "norm",
+  clip_params   = list(max_norm = 1.0)
+)
 }
+
+}
+\concept{model training}

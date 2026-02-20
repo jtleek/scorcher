@@ -2,38 +2,83 @@
 % Please edit documentation in R/scorch_function.R
 \name{scorch_function}
 \alias{scorch_function}
-\title{Add a Custom Function to a Scorch Model}
+\title{Add a Custom Function Node to a Scorch Model}
 \usage{
-scorch_function(scorch_model, func, ...)
+scorch_function(scorch_model, name, func, inputs = NULL, ...)
 }
 \arguments{
-\item{scorch_model}{A scorch model object to which a custom function
-is to be added.}
+\item{scorch_model}{A \code{scorch_model} object created by
+\code{\link{initiate_scorch}}.}
 
-\item{func}{A function to be added to the scorch model.}
+\item{name}{A unique character string identifying this node in the
+model graph. Names wire the computation graph -- other nodes
+reference them via their \code{inputs} argument to define
+branching, fusion, and skip connections. Names are arbitrary but
+appear in error messages and \code{\link{plot_scorch_model}}
+output. Common prefixes: \code{"fc"} (linear), \code{"conv"}
+(convolution), \code{"act"} (activation). Use number suffixes
+for multiples (e.g., \code{"fc1"}, \code{"fc2"}).}
 
-\item{...}{Additional arguments to be passed to the custom function.}
+\item{func}{A function to apply during the forward pass. It will
+receive the upstream tensor(s) as its first argument(s), followed
+by any additional arguments captured via \code{...}.}
+
+\item{inputs}{Character vector of upstream node names. If \code{NULL}
+(default), resolved automatically (last node or sole input).}
+
+\item{...}{Additional arguments passed to \code{func} at forward
+time. These are captured at model-build time and baked into the
+node.}
 }
 \value{
-The updated scorch model with the custom function added to its
-architecture.
+The updated \code{scorch_model} with a new row appended to
+its \code{graph} tibble.
 }
 \description{
-This function adds a custom function to the scorch model architecture.
+Wraps an arbitrary R function as a node in the Scorch computation
+graph. This is useful for operations that are not standard torch
+layers but are needed in the forward pass (e.g., reshaping,
+scaling, custom activations).
+}
+\details{
+The function is wrapped in a lightweight \code{torch::nn_module} so
+it can participate in the graph alongside standard layers. Any extra
+arguments in \code{...} are captured at build time and passed to
+\code{func} on every forward call.
+
+Unlike \code{\link{scorch_layer}}, which instantiates a torch
+\code{nn_module} constructor, \code{scorch_function} accepts plain
+R functions. Use this for stateless operations that do not have
+learnable parameters.
 }
 \examples{
+\dontrun{
+# Scale a tensor by a constant
+model <- model |>
+  scorch_function("scale", function(x, factor) x * factor,
+                  factor = 0.1)
 
-custom_function <- function(x, factor) { x * factor }
-
-input  <- mtcars |> as.matrix() |> torch::torch_tensor()
-
-output <- mtcars |> as.matrix() |> torch::torch_tensor()
-
-dl <- scorch_create_dataloader(input, output, batch_size = 2)
-
-scorch_model <- dl |> initiate_scorch() |>
-
-  scorch_layer("linear", 11, 5) |>
-
-  scorch_function(custom_function, factor = 2)
+# Reshape before a linear layer
+model <- model |>
+  scorch_function("reshape", function(x) x$view(c(x$size(1), -1)))
 }
+
+}
+\seealso{
+Other model construction: 
+\code{\link{compile_scorch}()},
+\code{\link{initiate_scorch}()},
+\code{\link{plot_scorch_model}()},
+\code{\link{print.scorch_model}()},
+\code{\link{scorch_add_skip}()},
+\code{\link{scorch_attention}()},
+\code{\link{scorch_batchnorm}()},
+\code{\link{scorch_concat}()},
+\code{\link{scorch_dropout}()},
+\code{\link{scorch_flatten}()},
+\code{\link{scorch_input}()},
+\code{\link{scorch_layer}()},
+\code{\link{scorch_output}()},
+\code{\link{scorch_transformer_encoder}()}
+}
+\concept{model construction}

@@ -27,5 +27,6 @@ Suggests:
     rmarkdown,
     tensorflow,
     tfdatasets,
-    tidyverse
+    tidyverse,
+    torchvision
 VignetteBuilder: knitr

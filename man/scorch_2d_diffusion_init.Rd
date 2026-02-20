@@ -35,3 +35,10 @@ The \code{scorch_2d_diffusion_init} function can be passed to \code{compile_scor
 and provides additional functionality for initializing a Scorch 2D diffusion
 model by setting up positional embeddings for the input and time steps.
 }
+\seealso{
+Other diffusion: 
+\code{\link{NoiseScheduler}()},
+\code{\link{scorch_2d_diffusion_forward}()},
+\code{\link{scorch_2d_diffusion_train}()}
+}
+\concept{diffusion}

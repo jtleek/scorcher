@@ -26,3 +26,12 @@ emb <- LearnableEmbedding(8)
 emb(x)
 
 }
+\seealso{
+Other embeddings: 
+\code{\link{IdentityEmbedding}()},
+\code{\link{LinearEmbedding}()},
+\code{\link{PositionalEmbedding}()},
+\code{\link{SinusoidalEmbedding}()},
+\code{\link{ZeroEmbedding}()}
+}
+\concept{embeddings}

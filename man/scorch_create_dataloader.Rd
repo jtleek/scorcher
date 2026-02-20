@@ -2,43 +2,86 @@
 % Please edit documentation in R/create_dataloader.R
 \name{scorch_create_dataloader}
 \alias{scorch_create_dataloader}
-\title{Create a New Dataloader for Building a Scorch Model}
+\title{Create a Scorch DataLoader for Multi-Input / Multi-Output Models}
 \usage{
 scorch_create_dataloader(
   input,
   output,
-  name = "dl",
   batch_size = 32,
-  shuffle = TRUE
+  shuffle = TRUE,
+  num_workers = 0,
+  pin_memory = FALSE,
+  ...
 )
 }
 \arguments{
-\item{input}{A tensor representing the input data (usually your predictors,
-first dimensions is index).}
+\item{input}{A torch tensor, R array, or named list thereof. For
+multi-input models, pass a named list with one element per input
+stream (e.g., \code{list(a = tensor_a, b = tensor_b)}).}
 
-\item{output}{A tensor representing the output data (usually what you are
-predicting, first dimension is index).}
+\item{output}{A torch tensor, R array, or named list thereof. For
+multi-output models, pass a named list with one element per output
+head.}
 
-\item{name}{A character string representing the name of the dataloader.
-Default is "dl".}
+\item{batch_size}{Integer. Batch size (default 32).}
 
-\item{batch_size}{An integer specifying the batch size. Default is 32.}
+\item{shuffle}{Logical. Shuffle each epoch? (default \code{TRUE}).}
 
-\item{shuffle}{A logical value indicating whether to shuffle the data.
-Default is TRUE.}
+\item{num_workers}{Integer. Number of worker processes for data
+loading (default 0).}
+
+\item{pin_memory}{Logical. Pin memory for faster GPU transfer
+(default \code{FALSE}).}
+
+\item{...}{Additional arguments passed to \code{torch::dataloader()}.}
 }
 \value{
-The dataloader with the specified batch size as a scorch_dataloader.
+A \code{torch::dataloader} yielding batches of the form
+\code{list(input = <named list>, output = <named list>)}.
 }
 \description{
-This function creates a dataloader for building a scorch model from the
-given input and output tensors.
+Builds a \code{torch::dataloader} from input and output data. Accepts
+bare tensors, R arrays, or named lists for multi-input and
+multi-output architectures. Inputs are converted to float and outputs
+are converted to the appropriate dtype (long for classification,
+float for regression).
+}
+\details{
+Type conversion is handled automatically:
+\describe{
+\item{Inputs}{Cast to \code{torch_float()}. 3-D tensors (N, H, W)
+gain a channel dimension (N, 1, H, W). 1-D tensors (N) become
+(N, 1).}
+\item{Outputs}{Integer vectors and 1-D long tensors are kept as
+\code{torch_long()} for classification. Float vectors and tensors
+are kept as \code{torch_float()} for regression. 1-D float
+tensors are unsqueezed to (N, 1).}
+}
+
+Bare (non-list) inputs and outputs are wrapped in a single-element
+named list automatically.
 }
 \examples{
+\dontrun{
+# Single input / single output
+dl <- scorch_create_dataloader(
+  input  = torch::torch_randn(100, 10),
+  output = torch::torch_randn(100, 1),
+  batch_size = 32
+)
 
-input  <- mtcars |> as.matrix() |> torch::torch_tensor()
-
-output <- mtcars |> as.matrix() |> torch::torch_tensor()
-
-dl <- scorch_create_dataloader(input, output, batch_size = 2)
+# Multi-input for fusion models
+dl <- scorch_create_dataloader(
+  input  = list(a = tensor_a, b = tensor_b),
+  output = labels,
+  batch_size = 16
+)
 }
+
+}
+\seealso{
+Other data loading: 
+\code{\link{scorch_read_wfdb_file}()},
+\code{\link{scorch_tfrecord}()}
+}
+\concept{data loading}

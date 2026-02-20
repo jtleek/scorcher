@@ -2,7 +2,7 @@
 % Please edit documentation in R/scorch_tfrecord.R
 \name{scorch_tfrecord}
 \alias{scorch_tfrecord}
-\title{Create a torch dataset from TFRecord files}
+\title{Create a Torch Dataset from TFRecord Files}
 \usage{
 scorch_tfrecord(
   filepaths,
@@ -13,92 +13,63 @@ scorch_tfrecord(
 )
 }
 \arguments{
-\item{filepaths}{A character vector of file paths to .tfrecord files}
+\item{filepaths}{A character vector of file paths to \code{.tfrecord} files.}
 
 \item{input}{A character string specifying the feature name in the TFRecord.
-Default is "embedding"}
+Default is \code{"embedding"}.}
 
-\item{output}{A numeric vector of outcome labels (0-based or 1-based)}
+\item{output}{A numeric vector of outcome labels (0-based or 1-based).}
 
 \item{dtype}{A character string specifying the data type for parsing
-features. Default is "float32"}
+features. One of \code{"float32"} (default), \code{"float16"},
+\code{"float64"}, \code{"int32"}, \code{"int64"}, \code{"int8"},
+\code{"int16"}, \code{"uint8"}, \code{"uint16"}, \code{"bool"}, or
+\code{"string"}.}
 
-\item{verbose}{A logical value indicating whether to print progress messages.
-Default is TRUE}
+\item{verbose}{Logical. If \code{TRUE} (default), prints progress messages
+via \code{message()}.}
 }
 \value{
-A list of class "scorch_tfrecord" containing:
-
+A list of class \code{"scorch_tfrecord"} containing:
 \itemize{
-
 \item \code{input}: A torch tensor of embeddings with shape
-(n_samples x n_features)
-
+(n_samples x n_features).
 \item \code{output}: A torch tensor of labels (converted to 1-based
-indexing if needed)
-
-\item \code{n_samples}: Number of samples loaded
-
-\item \code{n_features}: Number of features per sample
+indexing if needed).
+\item \code{n_samples}: Number of samples loaded.
+\item \code{n_features}: Number of features per sample.
 }
 }
 \description{
-This function reads embedding data from TFRecord files and returns torch
-tensors in a format compatible with scorcher pipelines, similar to
-torchvision datasets.
+Reads embedding data from TFRecord files and returns torch tensors in a
+format compatible with scorcher pipelines, similar to torchvision datasets.
 }
 \details{
 The function automatically handles:
 \itemize{
-
-\item Parsing of TFRecord files with VarLenFeature format
-
-\item Conversion of 0-based labels to 1-based for torch compatibility
-
-\item Validation of file paths and removal of missing files
+\item Parsing of TFRecord files with VarLenFeature format.
+\item Conversion of 0-based labels to 1-based for torch compatibility.
+\item Validation of file paths and removal of missing files.
 }
 
-The default feature name is "embedding", but this should be changed based on
-the user's TFRecord structure. User should check the data documentation to
-identify the correct feature name. Common alternatives include "features",
-"vector", or modality-specific names.
+The default feature name is \code{"embedding"}, but this should be changed
+based on the user's TFRecord structure. Check the data documentation to
+identify the correct feature name. Common alternatives include
+\code{"features"}, \code{"vector"}, or modality-specific names.
 
-The \code{dtype} parameter specifies the data type of features in TFRecord:
-
-\itemize{
-\item \code{"float32"} (default): 32-bit floating point, standard for
-neural network embeddings
-
-\item \code{"float16"}: 16-bit floating point, uses half the memory but
-less precise
-
-\item \code{"float64"}: 64-bit floating point, double precision for
-scientific computing
-
-\item \code{"int32"}: 32-bit integer, for categorical features or counts
-
-\item \code{"int64"}: 64-bit integer, for large integer values
-
-\item \code{"string"}: For text data.
+The returned object is compatible with \code{\link{scorch_create_dataloader}}
+and can be used directly:
+\preformatted{
+dataset <- scorch_tfrecord(...)
+dl <- scorch_create_dataloader(dataset$input, dataset$output)
 }
-
-The returned object is compatible with \code{scorch_create_dataloader()} and
-can be used directly:
-
-\code{dataset <- scorch_tfrecord(...); dl <- scorch_create_dataloader(
-dataset$input, dataset$output)}
 }
 \section{Required packages}{
 
-
-This function requires:
-
-\itemize{
-\item \code{tensorflow} for TFRecord parsing
-
-\item \code{tfdatasets} for dataset operations
-
-\item \code{torch} for tensor creation
+This function requires the \pkg{tensorflow} and \pkg{tfdatasets} packages,
+which are listed in \code{Suggests}. Install them with:
+\preformatted{
+install.packages(c("tensorflow", "tfdatasets"))
 }
 }
 
@@ -108,29 +79,28 @@ This function requires:
 metadata <- read.csv("path/to/metadata.csv")
 
 # Create dataset with default settings (float32)
-
 dataset <- scorch_tfrecord(metadata$filepath, output = metadata$label)
 
 # Create dataset silently
-
-dataset <- scorch_tfrecord(metadata$filepath, output = metadata$label, verbose = FALSE)
+dataset <- scorch_tfrecord(metadata$filepath, output = metadata$label,
+                           verbose = FALSE)
 
 # Access data for use with scorch_create_dataloader
-
-dl <- scorch_create_dataloader(dataset$input, dataset$output, batch_size = 32)
+dl <- scorch_create_dataloader(dataset$input, dataset$output,
+                               batch_size = 32)
 
 # Create dataset with custom feature name
-
 custom_dataset <- scorch_tfrecord(
-
   filepaths = file_list$path,
-
   input = "feature_vector",
-
   output = file_list$outcome
 )
 }
 
-
-
 }
+\seealso{
+Other data loading: 
+\code{\link{scorch_create_dataloader}()},
+\code{\link{scorch_read_wfdb_file}()}
+}
+\concept{data loading}
