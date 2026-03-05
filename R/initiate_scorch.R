@@ -1,112 +1,116 @@
 #===============================================================================
-# FUNCTIONS TO INITIATE A SCORCH MODEL
+# FUNCTION TO INITIATE A SCORCH MODEL
 #===============================================================================
 
 #=== MAIN FUNCTION =============================================================
 
 #' Initiate a Scorch Model
 #'
-#' @param dl An input data loader, created with scorch_create_dataloader
-#'
-#' @return A scorch model object
-#'
-#' @export
-#'
-#' @examples
-#'
-#' input  <- mtcars |> as.matrix() |> torch::torch_tensor()
-#'
-#' output <- mtcars |> as.matrix() |> torch::torch_tensor()
-#'
-#' dl <- scorch_create_dataloader(input, output, batch_size = 2)
-#'
-#' dl |> initiate_scorch()
-
-initiate_scorch <- function(dl) {
-
-  l <- list(dl = dl, scorch_architecture = list())
-
-  create_scorch_model_class(l)
-}
-
-#=== HELPERS ===================================================================
-
-#--- SCORCH MODEL CLASS --------------------------------------------------------
-
-#' Create a Scorch Model Class
-#'
 #' @description
-#' #' This function creates an object of class 'scorch_model'.
+#' Creates an empty Scorch model object with a graph-based architecture.
+#' This is the first step in the scorcher pipeline: it initializes the
+#' data structure that subsequent functions (\code{\link{scorch_input}},
+#' \code{\link{scorch_layer}}, \code{\link{scorch_output}},
+#' \code{\link{compile_scorch}}) build upon.
 #'
-#' @param obj An object to be converted to a scorch model.
+#' @param dl Optional \code{torch::dataloader} to attach to the model.
+#'   If \code{NULL} (default), no dataloader is attached and one can be
+#'   added later. If provided, it must inherit from \code{"dataloader"}.
 #'
-#' @return The input object with the class attribute set to 'scorch_model'.
+#' @returns A \code{scorch_model} object (a list with class
+#'   \code{"scorch_model"}) containing the following fields:
 #'
-#' @export
+#'   \describe{
+#'     \item{\code{graph}}{A tibble with columns \code{name} (character),
+#'       \code{module} (list of \code{nn_module} objects), and \code{inputs}
+#'       (list of character vectors). Starts empty; rows are added by
+#'       \code{\link{scorch_layer}} and related functions.}
+#'     \item{\code{inputs}}{Character vector of input node names, set by
+#'       \code{\link{scorch_input}}.}
+#'     \item{\code{outputs}}{Character vector of output node names, set by
+#'       \code{\link{scorch_output}}.}
+#'     \item{\code{compiled}}{Logical. \code{FALSE} until
+#'       \code{\link{compile_scorch}} is called.}
+#'     \item{\code{nn_model}}{The compiled \code{torch::nn_module}, or
+#'       \code{NULL} before compilation.}
+#'     \item{\code{optimizer}}{The optimizer object, or \code{NULL} before
+#'       compilation.}
+#'     \item{\code{loss_fn}}{The loss function (or named list of loss
+#'       functions), or \code{NULL} before compilation.}
+#'     \item{\code{dl}}{The attached \code{torch::dataloader}, or
+#'       \code{NULL} if none was provided.}
+#'   }
+#'
+#' @details
+#' The Scorch model uses a graph-based architecture stored as a tibble.
+#' Each row represents a named node in the computation graph, holding its
+#' \code{nn_module} and a character vector of upstream node names. This
+#' allows scorcher to represent complex architectures including multi-input
+#' models, branching paths, skip connections, and multi-output heads.
+#'
+#' A typical pipeline looks like:
+#'
+#' \preformatted{
+#' model <- initiate_scorch(dl) |>
+#'   scorch_input("input") |>
+#'   scorch_layer("fc1", "linear", in_features = 10, out_features = 32) |>
+#'   scorch_layer("act1", "relu") |>
+#'   scorch_layer("fc2", "linear", in_features = 32, out_features = 1) |>
+#'   scorch_output("fc2") |>
+#'   compile_scorch()
+#' }
 #'
 #' @examples
+#' \dontrun{
+#' # With a dataloader
+#' model <- initiate_scorch(dl)
 #'
-#' scorch_model <- create_scorch_model_class(list(scorch_architecture = list()))
+#' # Without a dataloader (attach later)
+#' model <- initiate_scorch()
+#' }
 #'
-#' class(scorch_model)
-
-create_scorch_model_class <- function(obj) {
-
-  structure(obj, class = "scorch_model")
-}
-
-#--- PRINT METHOD --------------------------------------------------------------
-
-#' Print Method for Scorch Model
-#'
-#' @description
-#' This function defines the print method for objects of class 'scorch_model'.
-#'
-#' @param x An object of class 'scorch_model'.
-#'
-#' @param ... Additional arguments to be passed to the print function.
+#' @family model construction
 #'
 #' @export
-#'
-#' @examples
-#'
-#' input  <- mtcars |> as.matrix() |> torch::torch_tensor()
-#'
-#' output <- mtcars |> as.matrix() |> torch::torch_tensor()
-#'
-#' dl <- scorch_create_dataloader(input, output, batch_size = 2)
-#'
-#' scorch_model <- dl |> initiate_scorch() |>
-#'
-#'   scorch_layer("linear", 11, 5)
-#'
-#' print(scorch_model)
 
-print.scorch_model <- function(x, ...) {
+initiate_scorch <- function(dl = NULL) {
 
-  cat("This scorch model has a dataloader object with features: \n\n")
+  #- Create the base structure for a scorch_model object.
+  #- The graph tibble will hold one row per named node, with columns:
+  #-   name:    Character -- unique node identifier
+  #-   module:  List -- the nn_module for this node
+  #-   inputs:  List of character vectors -- upstream node names
 
-  print(x$dl)
+  sm <- list(
 
-  cat("\n\n and model architecture:\n\n")
+    graph     = tibble::tibble(name    = character(),
+                               module  = list(),
+                               inputs  = list()),
 
-  n_layer = length(x$scorch_architecture) / 2
+    inputs    = character(),
+    outputs   = character(),
+    compiled  = FALSE,
+    nn_model  = NULL,
+    optimizer = NULL,
+    loss_fn   = NULL,
+    dl        = NULL
+  )
 
-  if (n_layer == 0) {
+  class(sm) <- "scorch_model"
 
-    cat(" * No layers\n\n")
+  #- If a dataloader is provided, validate and attach it.
 
-  } else {
+  if (!is.null(dl)) {
 
-    for(i in 1:n_layer) {
+    if (!inherits(dl, "dataloader")) {
 
-      cat(glue::glue(" * Layer {i} is a ",
-
-        "{crayon::red(class(x$scorch_architecture[(i*2-1)][[1]])[1])}",
-
-        " layer\n\n"))
+      stop("`dl` must be a torch::dataloader.", call. = FALSE)
     }
+
+    sm$dl <- dl
   }
+
+  sm
 }
 
 #=== END =======================================================================
