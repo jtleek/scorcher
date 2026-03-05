@@ -2,28 +2,24 @@
 % Please edit documentation in R/scorch_tfrecord.R
 \name{print.scorch_tfrecord}
 \alias{print.scorch_tfrecord}
-\title{Print Method for Scorch TFRecord}
+\title{Print Method for scorch TFRecord}
 \usage{
 \method{print}{scorch_tfrecord}(x, ...)
 }
 \arguments{
-\item{x}{An object of class 'scorch_tfrecord'.}
+\item{x}{An object of class \code{"scorch_tfrecord"}.}
 
-\item{...}{Additional arguments to be passed to the print function.}
+\item{...}{Additional arguments (currently unused).}
 }
 \value{
-NULL. This function is called for its side effect of printing
-information about the tfrecord dataset.
+The input object, invisibly.
 }
 \description{
-Defines the print method for objects of class 'scorch_tfrecord', providing
-a summary of its features.
+Prints a summary of a \code{scorch_tfrecord} object.
 }
 \examples{
 \dontrun{
 dataset <- scorch_tfrecord(metadata$filepaths, output = metadata$labels)
-
 print(dataset)
 }
-
 }

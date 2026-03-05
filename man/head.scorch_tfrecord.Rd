@@ -2,27 +2,25 @@
 % Please edit documentation in R/scorch_tfrecord.R
 \name{head.scorch_tfrecord}
 \alias{head.scorch_tfrecord}
-\title{Head Method for Scorch TFRecord}
+\title{Head Method for scorch TFRecord}
 \usage{
 \method{head}{scorch_tfrecord}(x, ...)
 }
 \arguments{
-\item{x}{An object of class 'scorch_tfrecord'.}
+\item{x}{An object of class \code{"scorch_tfrecord"}.}
 
-\item{...}{Additional arguments to be passed to the head function.}
+\item{...}{Additional arguments passed to \code{\link[utils]{head}}.}
 }
 \value{
-A list containing the first elements of the input and output data
-from the tfrecord dataset.
+A list containing the first elements of the input and output tensors.
 }
 \description{
-Defines the head method for objects of class 'scorch_tfrecord', returning
-the first elements of the input and output data.
+Returns the first elements of the input and output data from a
+\code{scorch_tfrecord} object.
 }
 \examples{
 \dontrun{
 dataset <- scorch_tfrecord(filepaths, output = labels)
-
 head(dataset)
 }
 }

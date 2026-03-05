@@ -33,3 +33,12 @@ emb(x)
 \references{
 \url{https://github.com/tanelp/tiny-diffusion}
 }
+\seealso{
+Other embeddings: 
+\code{\link{IdentityEmbedding}()},
+\code{\link{LearnableEmbedding}()},
+\code{\link{LinearEmbedding}()},
+\code{\link{SinusoidalEmbedding}()},
+\code{\link{ZeroEmbedding}()}
+}
+\concept{embeddings}

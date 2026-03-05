@@ -37,3 +37,10 @@ means, and adding noise to samples.
 \references{
 \url{https://github.com/tanelp/tiny-diffusion}
 }
+\seealso{
+Other diffusion: 
+\code{\link{scorch_2d_diffusion_forward}()},
+\code{\link{scorch_2d_diffusion_init}()},
+\code{\link{scorch_2d_diffusion_train}()}
+}
+\concept{diffusion}

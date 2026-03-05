@@ -1,2 +1,5 @@
 .Rproj.user
 inst/doc
+README.html
+vignettes/*.knit.md
+vignettes/*_files/

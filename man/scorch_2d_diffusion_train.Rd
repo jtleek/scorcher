@@ -22,3 +22,10 @@ The \code{scorch_2d_diffusion_train} function prepares a batch of data for
 training by adding noise to the inputs according to the current timestep and
 generating the corresponding noisy outputs.
 }
+\seealso{
+Other diffusion: 
+\code{\link{NoiseScheduler}()},
+\code{\link{scorch_2d_diffusion_forward}()},
+\code{\link{scorch_2d_diffusion_init}()}
+}
+\concept{diffusion}

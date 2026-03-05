@@ -4,6 +4,7 @@
 # scorcher: Blazing a trail for effortless model building with torch in R
 
 <!-- badges: start -->
+
 <!-- badges: end -->
 
 ### <img src="man/figures/scorcher.png" align="right" height="200" style="float:right; height:200px;"/>
@@ -89,26 +90,37 @@ dl <- scorch_create_dataloader(x_train, y_train, batch_size = 500)
 ``` r
 #- Define the Neural Network
 
-scorch_model <- dl |> 
-  initiate_scorch() |> 
-  scorch_layer("conv2d", in_channels =  1, out_channels = 32, kernel_size = 3) |> 
-  scorch_layer("relu") |>
-  scorch_layer("conv2d", in_channels = 32, out_channels = 64, kernel_size = 3) |> 
-  scorch_layer("relu") |>
-  scorch_layer("max_pool2d", kernel_size = 2) |> 
-  scorch_layer("dropout2d", p = 0.25) |>
-  scorch_function(torch_flatten, start_dim = 2) |> 
-  scorch_layer("linear", 9216, 128) |>
-  scorch_layer("relu") |> 
-  scorch_layer("linear", 128, 10)
+scorch_model <- initiate_scorch(dl) |>
+  scorch_input("x") |>
+  scorch_layer("conv1", "conv2d", in_channels = 1, out_channels = 32, kernel_size = 3) |>
+  scorch_layer("act1", "relu") |>
+  scorch_layer("conv2", "conv2d", in_channels = 32, out_channels = 64, kernel_size = 3) |>
+  scorch_layer("act2", "relu") |>
+  scorch_layer("pool1", "max_pool2d", kernel_size = 2) |>
+  scorch_dropout("drop1", p = 0.25) |>
+  scorch_flatten("flat1") |>
+  scorch_layer("fc1", "linear", in_features = 9216, out_features = 128) |>
+  scorch_layer("act3", "relu") |>
+  scorch_layer("fc2", "linear", in_features = 128, out_features = 10) |>
+  scorch_output("fc2")
 ```
+
+Node names (like `"conv1"`, `"fc1"`) are unique identifiers that wire
+the computation graph – they let nodes reference each other for
+branching, fusion, and skip connections. See `vignette("scorch_layer")`
+for naming conventions.
 
 **4. Compile the Model:**
 
 ``` r
 #- Compile the Neural Network
 
-compiled_scorch_model <- compile_scorch(scorch_model)
+scorch_model <- scorch_model |>
+  compile_scorch(
+    loss_fn          = nn_cross_entropy_loss(),
+    optimizer_fn     = optim_adam,
+    optimizer_params = list(lr = 0.001)
+  )
 ```
 
 **5. Train the Model**
@@ -116,20 +128,8 @@ compiled_scorch_model <- compile_scorch(scorch_model)
 ``` r
 #-- Training the Neural Network
 
-fitted_scorch_model <- compiled_scorch_model |> 
-  fit_scorch(loss = nn_cross_entropy_loss, num_epochs = 10, verbose = T)
-#> No GPU detected. Using available CPU.
-#> 
-#> Epoch 1, Loss: 2.02356864586473 
-#> Epoch 2, Loss: 0.0940264421204726 
-#> Epoch 3, Loss: 0.0601395909674466 
-#> Epoch 4, Loss: 0.0492425365373492 
-#> Epoch 5, Loss: 0.0394406393170357 
-#> Epoch 6, Loss: 0.0305162566791599 
-#> Epoch 7, Loss: 0.0269935902828972 
-#> Epoch 8, Loss: 0.0224211714424503 
-#> Epoch 9, Loss: 0.0192102687200531 
-#> Epoch 10, Loss: 0.0172218276983282
+scorch_model <- scorch_model |>
+  fit_scorch(num_epochs = 10, verbose = TRUE)
 ```
 
 **6. Evaluate the Model**
@@ -152,14 +152,14 @@ y_test <- torch_tensor(test_data$targets, dtype = torch_long())
 
 #- Model Predictions
 
-fitted_scorch_model$eval()
+scorch_model$nn_model$eval()
 
-pred <- fitted_scorch_model(x_test) |> torch_argmax(dim = 2)
+pred <- scorch_model$nn_model(x_test) |> torch_argmax(dim = 2)
 
 accuracy <- sum(pred == y_test)$item() / length(y_test)
 
 cat(sprintf("Testing Accuracy: %.2f%%\n", accuracy * 100))
-#> Testing Accuracy: 98.63%
+#> Testing Accuracy: 98.59%
 ```
 
 **Example Predictions Images:**
