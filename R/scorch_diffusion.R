@@ -25,10 +25,12 @@
 #' @param beta_schedule The schedule type for beta values, either "linear" or
 #' "quadratic". Default is "linear".
 #'
-#' @return A `NoiseScheduler` object with methods for managing the diffusion
+#' @returns A `NoiseScheduler` object with methods for managing the diffusion
 #' process.
 #'
 #' @references <https://github.com/tanelp/tiny-diffusion>
+#'
+#' @family diffusion
 #'
 #' @export
 
@@ -182,7 +184,9 @@ NoiseScheduler <- nn_module(
 #'
 #' @param scale The scaling factor for input embeddings. Default is 1.0.
 #'
-#' @return None. The function modifies the `model` in place.
+#' @returns None. The function modifies the `model` in place.
+#'
+#' @family diffusion
 #'
 #' @export
 
@@ -214,7 +218,9 @@ scorch_2d_diffusion_init <- function(model, emb_size = 128,
 #'
 #' @param timesteps The current timesteps in the diffusion process.
 #'
-#' @return The processed input tensor after embedding and concatenation.
+#' @returns The processed input tensor after embedding and concatenation.
+#'
+#' @family diffusion
 #'
 #' @export
 
@@ -245,8 +251,10 @@ scorch_2d_diffusion_forward <- function(model, input, timesteps) {
 #'
 #' @param ... Additional arguments for customization.
 #'
-#' @return A list containing the noisy inputs, the noise added, and the
+#' @returns A list containing the noisy inputs, the noise added, and the
 #' timesteps used.
+#'
+#' @family diffusion
 #'
 #' @export
 
