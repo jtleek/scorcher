@@ -71,6 +71,37 @@ scorch_function <- function(scorch_model,
                             inputs = NULL,
                             ...) {
 
+  #- Resolve inputs when not specified explicitly.
+
+  if (is.null(inputs)) {
+
+    if (nrow(scorch_model$graph) == 0) {
+
+      if (length(scorch_model$inputs) == 0) {
+
+        stop("No inputs declared. Add at least one with scorch_input().",
+             call. = FALSE)
+
+      } else if (length(scorch_model$inputs) > 1) {
+
+        stop("Must specify 'inputs' when multiple inputs exist.",
+             call. = FALSE)
+      }
+
+      inputs <- scorch_model$inputs
+
+    } else {
+
+      inputs <- utils::tail(scorch_model$graph$name, 1)
+    }
+  }
+
+  #- Validate name before building the module.
+
+  if (name %in% scorch_model$graph$name || name %in% scorch_model$inputs)
+    stop("Node name '", name, "' already exists in the model graph.",
+         call. = FALSE)
+
   #- Capture extra arguments to bake into the forward pass.
 
   extra_args <- list(...)
@@ -86,26 +117,6 @@ scorch_function <- function(scorch_model,
       do.call(func, c(list(...), extra_args))
     }
   )()
-
-  #- Resolve inputs when not specified explicitly.
-
-  if (is.null(inputs)) {
-
-    if (nrow(scorch_model$graph) == 0) {
-
-      if (length(scorch_model$inputs) != 1) {
-
-        stop("Must specify 'inputs' when multiple inputs exist.",
-             call. = FALSE)
-      }
-
-      inputs <- scorch_model$inputs
-
-    } else {
-
-      inputs <- utils::tail(scorch_model$graph$name, 1)
-    }
-  }
 
   #- Append to graph.
 
