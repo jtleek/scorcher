@@ -26,9 +26,9 @@
 #' @param inputs Character vector of two or more upstream node names
 #'   whose outputs will be concatenated.
 #'
-#' @param dim Integer. Dimension along which to concatenate (default 1,
-#'   which is typically the feature dimension after the batch dimension).
-#'   Use \code{dim = 2} when concatenating feature vectors.
+#' @param dim Integer. Dimension along which to concatenate (default 2,
+#'   the feature dimension). Dim 1 is the batch dimension in R torch
+#'   (1-indexed).
 #'
 #' @returns The updated \code{scorch_model} with a new row appended to
 #'   its \code{graph} tibble.
@@ -52,7 +52,19 @@
 scorch_concat <- function(scorch_model,
                           name,
                           inputs,
-                          dim = 1) {
+                          dim = 2) {
+
+  #- Validate inputs and name before building the module.
+
+  all_names <- c(scorch_model$inputs, scorch_model$graph$name)
+  bad_inputs <- setdiff(inputs, all_names)
+  if (length(bad_inputs) > 0)
+    stop("Input node(s) not found in model: ",
+         paste(bad_inputs, collapse = ", "), call. = FALSE)
+
+  if (name %in% scorch_model$graph$name || name %in% scorch_model$inputs)
+    stop("Node name '", name, "' already exists in the model graph.",
+         call. = FALSE)
 
   #- Build a lightweight module that concatenates its inputs.
 
