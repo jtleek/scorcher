@@ -53,6 +53,11 @@ NoiseScheduler <- nn_module(
       self$betas <- torch_linspace(sqrt(beta_start), sqrt(beta_end),
 
         num_timesteps, dtype = torch_float())^2
+
+    } else {
+
+      stop("Unknown beta_schedule '", beta_schedule,
+           "'. Use 'linear' or 'quadratic'.", call. = FALSE)
     }
 
     self$alphas <- 1.0 - self$betas
@@ -121,9 +126,9 @@ NoiseScheduler <- nn_module(
       return(torch_tensor(0, dtype = torch_float()))
     }
 
-    variance <- self$betas[t] *
+    variance <- self$betas[t + 1] *
 
-      (1.0 - self$alphas_cumprod_prev[t]) / (1.0 - self$alphas_cumprod[t])
+      (1.0 - self$alphas_cumprod_prev[t + 1]) / (1.0 - self$alphas_cumprod[t + 1])
 
     variance$clamp(min = 1e-20)
   },
@@ -264,7 +269,7 @@ scorch_2d_diffusion_train <- function(batch, noise_scheduler, ...) {
 
   timesteps <- torch_randint(0, noise_scheduler$num_timesteps,
 
-    list(batch$input$shape[1])) |> torch_tensor(dtype = torch_long())
+    list(batch$input$shape[1]), dtype = torch_long())
 
   noisy <- noise_scheduler$add_noise(batch$input, noise, timesteps)
 
