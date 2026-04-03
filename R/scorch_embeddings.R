@@ -46,9 +46,10 @@ SinusoidalEmbedding <- nn_module(
 
     half_size <- self$size %/% 2
 
-    emb <- torch_log(torch_tensor(10000.0)) / (half_size - 1)
+    #- 10000 is the base frequency from Vaswani et al. "Attention Is All You Need".
+    emb <- torch_log(torch_tensor(10000.0)) / max(half_size - 1, 1)
 
-    emb <- torch_exp(-emb * torch_arange(1, half_size))
+    emb <- torch_exp(-emb * torch_arange(0, half_size - 1))
 
     emb <- x$unsqueeze(-1) * emb$unsqueeze(1)
 
