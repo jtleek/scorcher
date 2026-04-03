@@ -132,7 +132,12 @@ scorch_layer <- function(scorch_model,
 
       #- Graph is empty: must have exactly one declared input.
 
-      if (length(scorch_model$inputs) != 1) {
+      if (length(scorch_model$inputs) == 0) {
+
+        stop("No inputs declared. Add at least one with scorch_input().",
+             call. = FALSE)
+
+      } else if (length(scorch_model$inputs) > 1) {
 
         stop("Must specify 'inputs' when multiple inputs exist.",
              call. = FALSE)
@@ -147,6 +152,18 @@ scorch_layer <- function(scorch_model,
       inputs <- utils::tail(scorch_model$graph$name, 1)
     }
   }
+
+  #- Validate inputs and name before building the module.
+
+  all_names <- c(scorch_model$inputs, scorch_model$graph$name)
+  bad_inputs <- setdiff(inputs, all_names)
+  if (length(bad_inputs) > 0)
+    stop("Input node(s) not found in model: ",
+         paste(bad_inputs, collapse = ", "), call. = FALSE)
+
+  if (name %in% scorch_model$graph$name || name %in% scorch_model$inputs)
+    stop("Node name '", name, "' already exists in the model graph.",
+         call. = FALSE)
 
   #- Instantiate the module.
 
