@@ -15,8 +15,8 @@
 #' This is the scorcher-specific save function. For saving bare
 #' \code{nn_module} objects, use \code{\link[torch]{torch_save}} directly.
 #'
-#' @param object A compiled \code{scorch_model} object (i.e., one where
-#'   \code{object$compiled} is \code{TRUE}).
+#' @param scorch_model A compiled \code{scorch_model} object (i.e., one where
+#'   \code{scorch_model$compiled} is \code{TRUE}).
 #'
 #' @param path Character string. File path to save to. If no file extension is
 #'   provided, \code{.pt} is appended automatically. Extensions \code{.pt} and
@@ -45,7 +45,7 @@
 #' The saved \code{.pt} file contains a named list with the following fields:
 #' \describe{
 #'   \item{\code{state_dict}}{Model weights from
-#'     \code{object$nn_model$state_dict()}. This is a named list of tensors,
+#'     \code{scorch_model$nn_model$state_dict()}. This is a named list of tensors,
 #'     one per learnable parameter (e.g., layer weights and biases).}
 #'   \item{\code{graph}}{The tibble graph architecture, converted to a plain
 #'     list for serialization (tibbles don't serialize cleanly through
@@ -129,7 +129,7 @@
 #'
 #' @export
 
-scorch_save <- function(object,
+scorch_save <- function(scorch_model,
                         path,
                         include_optimizer = TRUE,
                         timestamp = FALSE,
@@ -142,9 +142,9 @@ scorch_save <- function(object,
   #- loss, metadata) available to save. Users with bare nn_modules should use
   #- torch::torch_save() directly, which handles raw tensors and nn_modules.
 
-  if (!inherits(object, "scorch_model")) {
+  if (!inherits(scorch_model, "scorch_model")) {
 
-    stop("`object` must be a scorch_model. ",
+    stop("`scorch_model` must be a scorch_model. ",
          "For bare nn_modules, use torch::torch_save() directly.",
          call. = FALSE)
   }
@@ -153,7 +153,7 @@ scorch_save <- function(object,
   #- compilation is when the nn_module is created from the graph. An uncompiled
   #- model has no nn_model or state_dict to save -- it's just a graph blueprint.
 
-  if (!isTRUE(object$compiled)) {
+  if (!isTRUE(scorch_model$compiled)) {
 
     stop("Model must be compiled before saving. ",
          "Run compile_scorch() first.",
@@ -250,7 +250,7 @@ scorch_save <- function(object,
 
   if (file.exists(path) && !overwrite) {
 
-    stop("File already exists: '", path, "'. ",
+    stop("File already exists: '", basename(path), "'. ",
          "Use overwrite = TRUE to replace it.",
          call. = FALSE)
   }
@@ -283,7 +283,7 @@ scorch_save <- function(object,
 
   model_device <- tryCatch({
 
-    params <- object$nn_model$parameters
+    params <- scorch_model$nn_model$parameters
 
     if (length(params) > 0) {
 
@@ -312,12 +312,12 @@ scorch_save <- function(object,
   #- inputs) preserves all the architectural information and serializes
   #- reliably. scorch_load() converts it back to a tibble on load.
 
-  graph_as_list <- if (!is.null(object$graph)) {
+  graph_as_list <- if (!is.null(scorch_model$graph)) {
 
     list(
-      name    = object$graph$name,     # Character vector of node names
-      module  = object$graph$module,   # List of nn_module objects
-      inputs  = object$graph$inputs    # List of character vectors (DAG edges)
+      name    = scorch_model$graph$name,     # Character vector of node names
+      module  = scorch_model$graph$module,   # List of nn_module objects
+      inputs  = scorch_model$graph$inputs    # List of character vectors (DAG edges)
     )
 
   } else {
@@ -361,11 +361,11 @@ scorch_save <- function(object,
   #- metadata: environment snapshot for reproducibility and diagnostics.
 
   payload <- list(
-    state_dict = object$nn_model$state_dict(),
+    state_dict = scorch_model$nn_model$state_dict(),
     graph      = graph_as_list,
-    inputs     = object$inputs,
-    outputs    = object$outputs,
-    loss_fn    = object$loss_fn,
+    inputs     = scorch_model$inputs,
+    outputs    = scorch_model$outputs,
+    loss_fn    = scorch_model$loss_fn,
     metadata   = metadata
   )
 
@@ -385,10 +385,10 @@ scorch_save <- function(object,
   #- Setting include_optimizer = FALSE skips both, producing a smaller file
   #- suitable for inference-only deployment.
 
-  if (include_optimizer && !is.null(object$optimizer)) {
+  if (include_optimizer && !is.null(scorch_model$optimizer)) {
 
-    payload$optimizer_state <- object$optimizer$state_dict()
-    payload$optimizer_class <- class(object$optimizer)[1]
+    payload$optimizer_state <- scorch_model$optimizer$state_dict()
+    payload$optimizer_class <- class(scorch_model$optimizer)[1]
   }
 
   # ===== Save ===============================================================
