@@ -14,7 +14,7 @@ utils::globalVariables("self")
 #' After compilation, the model is ready for training with
 #' \code{\link{fit_scorch}}.
 #'
-#' @param sm A \code{scorch_model} object built with
+#' @param scorch_model A \code{scorch_model} object built with
 #'   \code{\link{initiate_scorch}}, \code{\link{scorch_input}},
 #'   \code{\link{scorch_layer}}, and \code{\link{scorch_output}}.
 #'
@@ -85,14 +85,40 @@ utils::globalVariables("self")
 #'
 #' @export
 
-compile_scorch <- function(sm,
+compile_scorch <- function(scorch_model,
                            loss_fn          = torch::nn_mse_loss(),
                            optimizer_fn     = torch::optim_adam,
                            optimizer_params = list(lr = 1e-3)) {
 
-  graph   <- sm$graph
-  inputs  <- sm$inputs
-  outputs <- sm$outputs
+  graph   <- scorch_model$graph
+  inputs  <- scorch_model$inputs
+  outputs <- scorch_model$outputs
+
+  #- Validate model before compiling.
+
+  if (length(inputs) == 0)
+    stop("Model has no inputs. Add at least one with scorch_input().",
+         call. = FALSE)
+
+  if (nrow(graph) == 0)
+    stop("Model has no layers. Add at least one with scorch_layer().",
+         call. = FALSE)
+
+  if (length(outputs) == 0)
+    stop("Model has no outputs. Mark at least one with scorch_output().",
+         call. = FALSE)
+
+  bad_outputs <- setdiff(outputs, graph$name)
+  if (length(bad_outputs) > 0)
+    stop("Output node(s) not found in graph: ",
+         paste(bad_outputs, collapse = ", "), call. = FALSE)
+
+  if (is.list(loss_fn) && length(outputs) > 1) {
+    missing_loss <- setdiff(outputs, names(loss_fn))
+    if (length(missing_loss) > 0)
+      stop("Loss function missing for output(s): ",
+           paste(missing_loss, collapse = ", "), call. = FALSE)
+  }
 
   #- Build the nn_module by registering all graph nodes as sub-modules
   #- and defining the forward pass as a graph traversal.
@@ -152,17 +178,20 @@ compile_scorch <- function(sm,
 
   #- Instantiate the module, optimizer, and attach everything.
 
-  sm$nn_model  <- mod()
+  scorch_model$nn_model  <- mod()
 
-  sm$optimizer <- do.call(optimizer_fn,
-                          c(list(params = sm$nn_model$parameters),
+  scorch_model$optimizer <- do.call(optimizer_fn,
+                          c(list(params = scorch_model$nn_model$parameters),
                             optimizer_params))
 
-  sm$loss_fn   <- loss_fn
+  scorch_model$optimizer_fn     <- optimizer_fn
+  scorch_model$optimizer_params <- optimizer_params
 
-  sm$compiled  <- TRUE
+  scorch_model$loss_fn   <- loss_fn
 
-  sm
+  scorch_model$compiled  <- TRUE
+
+  scorch_model
 }
 
 #=== END =======================================================================
