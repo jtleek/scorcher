@@ -59,6 +59,18 @@ scorch_add_skip <- function(scorch_model,
     stop("`inputs` must be length 2.", call. = FALSE)
   }
 
+  #- Validate inputs and name before building the module.
+
+  all_names <- c(scorch_model$inputs, scorch_model$graph$name)
+  bad_inputs <- setdiff(inputs, all_names)
+  if (length(bad_inputs) > 0)
+    stop("Input node(s) not found in model: ",
+         paste(bad_inputs, collapse = ", "), call. = FALSE)
+
+  if (name %in% scorch_model$graph$name || name %in% scorch_model$inputs)
+    stop("Node name '", name, "' already exists in the model graph.",
+         call. = FALSE)
+
   #- Build a lightweight module that sums its two inputs.
 
   skip_mod <- torch::nn_module(
