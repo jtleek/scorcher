@@ -5,7 +5,7 @@
 \title{Save a Compiled Scorcher Model}
 \usage{
 scorch_save(
-  object,
+  scorch_model,
   path,
   include_optimizer = TRUE,
   timestamp = FALSE,
@@ -13,8 +13,8 @@ scorch_save(
 )
 }
 \arguments{
-\item{object}{A compiled \code{scorch_model} object (i.e., one where
-\code{object$compiled} is \code{TRUE}).}
+\item{scorch_model}{A compiled \code{scorch_model} object (i.e., one where
+\code{scorch_model$compiled} is \code{TRUE}).}
 
 \item{path}{Character string. File path to save to. If no file extension is
 provided, \code{.pt} is appended automatically. Extensions \code{.pt} and
@@ -52,7 +52,7 @@ This is the scorcher-specific save function. For saving bare
 The saved \code{.pt} file contains a named list with the following fields:
 \describe{
 \item{\code{state_dict}}{Model weights from
-\code{object$nn_model$state_dict()}. This is a named list of tensors,
+\code{scorch_model$nn_model$state_dict()}. This is a named list of tensors,
 one per learnable parameter (e.g., layer weights and biases).}
 \item{\code{graph}}{The tibble graph architecture, converted to a plain
 list for serialization (tibbles don't serialize cleanly through
