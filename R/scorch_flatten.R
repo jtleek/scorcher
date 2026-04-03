@@ -61,17 +61,18 @@ scorch_flatten <- function(scorch_model,
                            start_dim = 2,
                            end_dim = -1) {
 
-  #- Instantiate the flatten module.
-
-  flatten_mod <- torch::nn_flatten(start_dim = start_dim, end_dim = end_dim)
-
   #- Resolve inputs when not specified explicitly.
 
   if (is.null(inputs)) {
 
     if (nrow(scorch_model$graph) == 0) {
 
-      if (length(scorch_model$inputs) != 1) {
+      if (length(scorch_model$inputs) == 0) {
+
+        stop("No inputs declared. Add at least one with scorch_input().",
+             call. = FALSE)
+
+      } else if (length(scorch_model$inputs) > 1) {
 
         stop("Must specify 'inputs' when multiple inputs exist.",
              call. = FALSE)
@@ -84,6 +85,16 @@ scorch_flatten <- function(scorch_model,
       inputs <- utils::tail(scorch_model$graph$name, 1)
     }
   }
+
+  #- Validate name before building the module.
+
+  if (name %in% scorch_model$graph$name || name %in% scorch_model$inputs)
+    stop("Node name '", name, "' already exists in the model graph.",
+         call. = FALSE)
+
+  #- Instantiate the flatten module.
+
+  flatten_mod <- torch::nn_flatten(start_dim = start_dim, end_dim = end_dim)
 
   #- Append to graph.
 
