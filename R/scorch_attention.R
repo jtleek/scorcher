@@ -61,7 +61,31 @@ scorch_attention <- function(scorch_model,
                              num_heads,
                              ...) {
 
-  attn_mod <- torch::nn_multihead_attention(embed_dim, num_heads, ...)
+  #- Validate inputs and name before building the module.
+
+  all_names <- c(scorch_model$inputs, scorch_model$graph$name)
+  bad_inputs <- setdiff(inputs, all_names)
+  if (length(bad_inputs) > 0)
+    stop("Input node(s) not found in model: ",
+         paste(bad_inputs, collapse = ", "), call. = FALSE)
+
+  if (name %in% scorch_model$graph$name || name %in% scorch_model$inputs)
+    stop("Node name '", name, "' already exists in the model graph.",
+         call. = FALSE)
+
+  #- Wrap nn_multihead_attention so forward() returns only the output
+  #- tensor, not the (output, weights) tuple that torch returns.
+
+  raw_attn <- torch::nn_multihead_attention(embed_dim, num_heads, ...)
+
+  attn_mod <- torch::nn_module(
+    initialize = function() {
+      self$attn <- raw_attn
+    },
+    forward = function(query, key, value) {
+      self$attn(query, key, value)[[1]]
+    }
+  )()
 
   scorch_model$graph <- tibble::add_row(
 

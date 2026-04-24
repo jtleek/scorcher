@@ -55,6 +55,13 @@ scorch_output <- function(scorch_model, outputs) {
     stop("`outputs` must be a character vector of node names.", call. = FALSE)
   }
 
+  #- Validate: output names must exist in the graph (not raw inputs).
+
+  bad <- setdiff(outputs, scorch_model$graph$name)
+  if (length(bad) > 0)
+    stop("Output node(s) not found in model: ",
+         paste(bad, collapse = ", "), call. = FALSE)
+
   scorch_model$outputs <- outputs
 
   scorch_model

@@ -11,7 +11,7 @@
 #' optimizer, and loss function. Supports single-output and
 #' multi-output (multi-head) architectures.
 #'
-#' @param sm A compiled \code{scorch_model} object. Must have been
+#' @param scorch_model A compiled \code{scorch_model} object. Must have been
 #'   processed by \code{\link{compile_scorch}} before fitting.
 #'
 #' @param num_epochs Integer. Number of training epochs (default 10).
@@ -71,13 +71,23 @@
 #'
 #' @export
 
-fit_scorch <- function(sm,
+fit_scorch <- function(scorch_model,
                        num_epochs    = 10,
                        verbose       = TRUE,
                        preprocess_fn = NULL,
                        clip_grad     = NULL,
                        clip_params   = list(),
                        ...) {
+
+  #- Validate that the model has been compiled.
+
+  if (!isTRUE(scorch_model$compiled))
+    stop("Model must be compiled with compile_scorch() before fitting.",
+         call. = FALSE)
+
+  if (is.null(scorch_model$dl))
+    stop("No dataloader attached. Use initiate_scorch(dl = ...) to attach one.",
+         call. = FALSE)
 
   #- Detect device.
 
@@ -94,23 +104,37 @@ fit_scorch <- function(sm,
     torch::torch_device("cpu")
   }
 
-  sm$nn_model <- sm$nn_model$to(device = device)
+  scorch_model$nn_model <- scorch_model$nn_model$to(device = device)
 
-  optimizer <- sm$optimizer
+  #- Recreate optimizer so it references the on-device parameters.
+  #- After $to(device), the old optimizer still points to stale CPU tensors.
+  #- For loaded models (via scorch_load), optimizer_fn may be NULL — fall back
+  #- to reusing the existing optimizer directly.
+
+  if (!is.null(scorch_model$optimizer_fn)) {
+
+    optimizer <- do.call(scorch_model$optimizer_fn,
+                         c(list(params = scorch_model$nn_model$parameters),
+                           scorch_model$optimizer_params))
+
+  } else {
+
+    optimizer <- scorch_model$optimizer
+  }
 
   #- Determine if there are multiple loss functions.
 
-  loss_fns <- sm$loss_fn
+  loss_fns <- scorch_model$loss_fn
 
   multi_loss <- is.list(loss_fns)
 
   #- Set output names and batch count.
 
-  outputs <- sm$outputs
+  outputs <- scorch_model$outputs
 
   n_out <- length(outputs)
 
-  n_batches <- length(sm$dl)
+  n_batches <- length(scorch_model$dl)
 
   #- Training loop.
 
@@ -118,7 +142,7 @@ fit_scorch <- function(sm,
 
     total_loss <- 0
 
-    coro::loop(for (batch in sm$dl) {
+    coro::loop(for (batch in scorch_model$dl) {
 
       #- Prepare inputs and targets.
 
@@ -159,7 +183,7 @@ fit_scorch <- function(sm,
 
       optimizer$zero_grad()
 
-      preds <- do.call(sm$nn_model, inputs)
+      preds <- do.call(scorch_model$nn_model, inputs)
 
       #- Ensure preds is a list.
 
@@ -205,12 +229,12 @@ fit_scorch <- function(sm,
 
         if (clip_grad == "norm") {
 
-          torch::nn_utils_clip_grad_norm_(sm$nn_model$parameters,
+          torch::nn_utils_clip_grad_norm_(scorch_model$nn_model$parameters,
                                           clip_params$max_norm)
 
         } else if (clip_grad == "value") {
 
-          torch::nn_utils_clip_grad_value_(sm$nn_model$parameters,
+          torch::nn_utils_clip_grad_value_(scorch_model$nn_model$parameters,
                                            clip_params$clip_value)
         }
       }
@@ -229,7 +253,11 @@ fit_scorch <- function(sm,
     }
   }
 
-  sm
+  #- Write the trained optimizer back so scorch_save captures its state.
+
+  scorch_model$optimizer <- optimizer
+
+  scorch_model
 }
 
 #=== END =======================================================================

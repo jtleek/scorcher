@@ -4,7 +4,7 @@
 \alias{scorch_concat}
 \title{Add a Concatenation Node to a Scorch Model}
 \usage{
-scorch_concat(scorch_model, name, inputs, dim = 1)
+scorch_concat(scorch_model, name, inputs, dim = 2)
 }
 \arguments{
 \item{scorch_model}{A \code{scorch_model} object created by
@@ -22,9 +22,9 @@ for multiples (e.g., \code{"fc1"}, \code{"fc2"}).}
 \item{inputs}{Character vector of two or more upstream node names
 whose outputs will be concatenated.}
 
-\item{dim}{Integer. Dimension along which to concatenate (default 1,
-which is typically the feature dimension after the batch dimension).
-Use \code{dim = 2} when concatenating feature vectors.}
+\item{dim}{Integer. Dimension along which to concatenate (default 2,
+the feature dimension). Dim 1 is the batch dimension in R torch
+(1-indexed).}
 }
 \value{
 The updated \code{scorch_model} with a new row appended to
@@ -57,12 +57,14 @@ Other model construction:
 \code{\link{scorch_add_skip}()},
 \code{\link{scorch_attention}()},
 \code{\link{scorch_batchnorm}()},
+\code{\link{scorch_conv_transpose}()},
 \code{\link{scorch_dropout}()},
 \code{\link{scorch_flatten}()},
 \code{\link{scorch_function}()},
 \code{\link{scorch_input}()},
 \code{\link{scorch_layer}()},
 \code{\link{scorch_output}()},
+\code{\link{scorch_pool}()},
 \code{\link{scorch_transformer_encoder}()}
 }
 \concept{model construction}

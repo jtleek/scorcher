@@ -131,6 +131,10 @@ scorch_load <- function(path,
                         device = "cpu",
                         verbose = TRUE) {
 
+  #- Null-coalescing helper (avoids R >= 4.4 / rlang dependency for %||%).
+
+  `%||%` <- function(x, y) if (is.null(x)) y else x
+
   # ===== Input validation ===================================================
 
   if (!is.character(path) || length(path) != 1) {
@@ -518,7 +522,7 @@ scorch_load <- function(path,
     message(paste0(" * R version: ",
                highlight(saved_meta$r_version %||% "unknown")))
 
-    message(paste0(" * Saved on: ",
+    message(paste0(" * Environment: ",
                highlight(paste0(
                  saved_meta$os %||% "unknown",
                  " (", saved_meta$device %||% "unknown", ")"

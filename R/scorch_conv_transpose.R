@@ -1,15 +1,16 @@
 #===============================================================================
-# FUNCTION TO ADD A BATCH NORMALIZATION NODE TO A SCORCH MODEL
+# FUNCTION TO ADD A TRANSPOSED CONVOLUTION NODE TO A SCORCH MODEL
 #===============================================================================
 
 #=== MAIN FUNCTION =============================================================
 
-#' Add a Batch Normalization Node to a Scorch Model
+#' Add a Transposed Convolution Node to a Scorch Model
 #'
 #' @description
-#' Convenience wrapper that adds a batch normalization node to the
-#' Scorch model graph. Supports 1D, 2D, and 3D variants via the
-#' \code{type} argument.
+#' Convenience wrapper that adds a transposed convolution
+#' (deconvolution) node to the Scorch model graph. Supports 1D, 2D,
+#' and 3D variants. Commonly used in decoder pathways, U-Nets,
+#' autoencoders, and generative models.
 #'
 #' @param scorch_model A \code{scorch_model} object created by
 #'   \code{\link{initiate_scorch}}.
@@ -26,52 +27,55 @@
 #' @param inputs Character vector of upstream node names. If \code{NULL}
 #'   (default), resolved automatically (last node or sole input).
 #'
-#' @param num_features Integer. Number of features (the C dimension).
+#' @param in_channels Integer. Number of input channels.
 #'
-#' @param type Character. Which batch norm variant to use:
-#'   \code{"1d"} (default) for 2D/3D inputs (linear layers),
-#'   \code{"2d"} for 4D inputs (conv2d layers),
-#'   \code{"3d"} for 5D inputs (conv3d layers).
+#' @param out_channels Integer. Number of output channels.
+#'
+#' @param kernel_size Integer or tuple. Size of the convolving kernel.
+#'
+#' @param type Character. Dimensionality variant:
+#'   \code{"1d"}, \code{"2d"} (default), or \code{"3d"}.
 #'
 #' @param ... Additional arguments passed to the underlying
-#'   \code{torch::nn_batch_norm*} function (e.g., \code{momentum},
-#'   \code{eps}).
+#'   \code{torch::nn_conv_transpose*} function (e.g., \code{stride},
+#'   \code{padding}, \code{output_padding}).
 #'
 #' @returns The updated \code{scorch_model} with a new row appended to
 #'   its \code{graph} tibble.
 #'
 #' @details
 #' This is equivalent to calling
-#' \code{scorch_layer(model, name, "batch_norm1d", inputs, num_features = n)}
-#' (or \code{"batch_norm2d"}, \code{"batch_norm3d"}) but provides a
-#' more readable API for a common operation.
+#' \code{scorch_layer(model, name, "conv_transpose2d", ...)} but
+#' provides a more readable API with a \code{type} parameter for
+#' selecting dimensionality.
 #'
 #' @examples
 #' \dontrun{
-#' # After linear layers (1D)
+#' # 2D transposed convolution for upsampling
 #' model <- model |>
-#'   scorch_layer("fc1", "linear", in_features = 10, out_features = 32) |>
-#'   scorch_batchnorm("bn1", num_features = 32) |>
-#'   scorch_layer("act1", "relu")
+#'   scorch_conv_transpose("deconv1",
+#'                         in_channels = 64, out_channels = 32,
+#'                         kernel_size = 4, stride = 2, padding = 1)
 #'
-#' # After conv2d layers (2D)
+#' # 1D transposed convolution for sequence generation
 #' model <- model |>
-#'   scorch_layer("conv1", "conv2d", in_channels = 3, out_channels = 16,
-#'                kernel_size = 3) |>
-#'   scorch_batchnorm("bn1", num_features = 16, type = "2d") |>
-#'   scorch_layer("act1", "relu")
+#'   scorch_conv_transpose("deconv1", type = "1d",
+#'                         in_channels = 128, out_channels = 64,
+#'                         kernel_size = 3)
 #' }
 #'
 #' @family model construction
 #'
 #' @export
 
-scorch_batchnorm <- function(scorch_model,
-                             name,
-                             inputs = NULL,
-                             num_features,
-                             type = "1d",
-                             ...) {
+scorch_conv_transpose <- function(scorch_model,
+                                  name,
+                                  inputs = NULL,
+                                  in_channels,
+                                  out_channels,
+                                  kernel_size,
+                                  type = "2d",
+                                  ...) {
 
   #- Resolve inputs when not specified explicitly.
 
@@ -104,15 +108,20 @@ scorch_batchnorm <- function(scorch_model,
     stop("Node name '", name, "' already exists in the model graph.",
          call. = FALSE)
 
-  bn_fn <- switch(type,
-    "1d" = torch::nn_batch_norm1d,
-    "2d" = torch::nn_batch_norm2d,
-    "3d" = torch::nn_batch_norm3d,
-    stop("Unknown batchnorm type '", type,
+  #- Dispatch to the correct transposed convolution function.
+
+  conv_fn <- switch(type,
+    "1d" = torch::nn_conv_transpose1d,
+    "2d" = torch::nn_conv_transpose2d,
+    "3d" = torch::nn_conv_transpose3d,
+    stop("Unknown conv_transpose type '", type,
          "'. Use '1d', '2d', or '3d'.", call. = FALSE)
   )
 
-  bn_mod <- bn_fn(num_features = num_features, ...)
+  conv_mod <- conv_fn(in_channels = in_channels,
+                      out_channels = out_channels,
+                      kernel_size = kernel_size,
+                      ...)
 
   #- Append to graph.
 
@@ -120,7 +129,7 @@ scorch_batchnorm <- function(scorch_model,
 
     scorch_model$graph,
     name   = name,
-    module = list(bn_mod),
+    module = list(conv_mod),
     inputs = list(inputs)
   )
 

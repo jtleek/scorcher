@@ -1,15 +1,15 @@
 #===============================================================================
-# FUNCTION TO ADD A BATCH NORMALIZATION NODE TO A SCORCH MODEL
+# FUNCTION TO ADD A POOLING NODE TO A SCORCH MODEL
 #===============================================================================
 
 #=== MAIN FUNCTION =============================================================
 
-#' Add a Batch Normalization Node to a Scorch Model
+#' Add a Pooling Node to a Scorch Model
 #'
 #' @description
-#' Convenience wrapper that adds a batch normalization node to the
-#' Scorch model graph. Supports 1D, 2D, and 3D variants via the
-#' \code{type} argument.
+#' Convenience wrapper that adds a pooling node to the Scorch model
+#' graph. Supports max, average, adaptive max, and adaptive average
+#' pooling in 1D, 2D, and 3D variants.
 #'
 #' @param scorch_model A \code{scorch_model} object created by
 #'   \code{\link{initiate_scorch}}.
@@ -26,52 +26,53 @@
 #' @param inputs Character vector of upstream node names. If \code{NULL}
 #'   (default), resolved automatically (last node or sole input).
 #'
-#' @param num_features Integer. Number of features (the C dimension).
+#' @param method Character. Pooling method:
+#'   \code{"max"} (default), \code{"avg"}, \code{"adaptive_max"},
+#'   or \code{"adaptive_avg"}.
 #'
-#' @param type Character. Which batch norm variant to use:
-#'   \code{"1d"} (default) for 2D/3D inputs (linear layers),
-#'   \code{"2d"} for 4D inputs (conv2d layers),
-#'   \code{"3d"} for 5D inputs (conv3d layers).
+#' @param type Character. Dimensionality variant:
+#'   \code{"1d"}, \code{"2d"} (default), or \code{"3d"}.
 #'
 #' @param ... Additional arguments passed to the underlying
-#'   \code{torch::nn_batch_norm*} function (e.g., \code{momentum},
-#'   \code{eps}).
+#'   \code{torch::nn_*_pool*} function (e.g., \code{kernel_size},
+#'   \code{stride}, \code{output_size}).
 #'
 #' @returns The updated \code{scorch_model} with a new row appended to
 #'   its \code{graph} tibble.
 #'
 #' @details
-#' This is equivalent to calling
-#' \code{scorch_layer(model, name, "batch_norm1d", inputs, num_features = n)}
-#' (or \code{"batch_norm2d"}, \code{"batch_norm3d"}) but provides a
-#' more readable API for a common operation.
+#' For standard pooling (\code{"max"}, \code{"avg"}), the
+#' \code{kernel_size} argument is required. For adaptive pooling
+#' (\code{"adaptive_max"}, \code{"adaptive_avg"}), the
+#' \code{output_size} argument is required instead.
 #'
 #' @examples
 #' \dontrun{
-#' # After linear layers (1D)
-#' model <- model |>
-#'   scorch_layer("fc1", "linear", in_features = 10, out_features = 32) |>
-#'   scorch_batchnorm("bn1", num_features = 32) |>
-#'   scorch_layer("act1", "relu")
-#'
-#' # After conv2d layers (2D)
+#' # Max pooling after conv2d
 #' model <- model |>
 #'   scorch_layer("conv1", "conv2d", in_channels = 3, out_channels = 16,
 #'                kernel_size = 3) |>
-#'   scorch_batchnorm("bn1", num_features = 16, type = "2d") |>
-#'   scorch_layer("act1", "relu")
+#'   scorch_pool("pool1", kernel_size = 2)
+#'
+#' # Adaptive average pooling to fixed output size
+#' model <- model |>
+#'   scorch_pool("apool", method = "adaptive_avg", output_size = 1)
+#'
+#' # 1D average pooling for sequence data
+#' model <- model |>
+#'   scorch_pool("pool1", method = "avg", type = "1d", kernel_size = 3)
 #' }
 #'
 #' @family model construction
 #'
 #' @export
 
-scorch_batchnorm <- function(scorch_model,
-                             name,
-                             inputs = NULL,
-                             num_features,
-                             type = "1d",
-                             ...) {
+scorch_pool <- function(scorch_model,
+                        name,
+                        inputs = NULL,
+                        method = "max",
+                        type = "2d",
+                        ...) {
 
   #- Resolve inputs when not specified explicitly.
 
@@ -104,15 +105,29 @@ scorch_batchnorm <- function(scorch_model,
     stop("Node name '", name, "' already exists in the model graph.",
          call. = FALSE)
 
-  bn_fn <- switch(type,
-    "1d" = torch::nn_batch_norm1d,
-    "2d" = torch::nn_batch_norm2d,
-    "3d" = torch::nn_batch_norm3d,
-    stop("Unknown batchnorm type '", type,
-         "'. Use '1d', '2d', or '3d'.", call. = FALSE)
+  #- Dispatch to the correct pooling function.
+
+  pool_key <- paste0(method, "_", type)
+
+  pool_fn <- switch(pool_key,
+    "max_1d"          = torch::nn_max_pool1d,
+    "max_2d"          = torch::nn_max_pool2d,
+    "max_3d"          = torch::nn_max_pool3d,
+    "avg_1d"          = torch::nn_avg_pool1d,
+    "avg_2d"          = torch::nn_avg_pool2d,
+    "avg_3d"          = torch::nn_avg_pool3d,
+    "adaptive_max_1d" = torch::nn_adaptive_max_pool1d,
+    "adaptive_max_2d" = torch::nn_adaptive_max_pool2d,
+    "adaptive_max_3d" = torch::nn_adaptive_max_pool3d,
+    "adaptive_avg_1d" = torch::nn_adaptive_avg_pool1d,
+    "adaptive_avg_2d" = torch::nn_adaptive_avg_pool2d,
+    "adaptive_avg_3d" = torch::nn_adaptive_avg_pool3d,
+    stop("Unknown pool method/type '", method, "' / '", type,
+         "'. method: 'max', 'avg', 'adaptive_max', 'adaptive_avg'. ",
+         "type: '1d', '2d', '3d'.", call. = FALSE)
   )
 
-  bn_mod <- bn_fn(num_features = num_features, ...)
+  pool_mod <- pool_fn(...)
 
   #- Append to graph.
 
@@ -120,7 +135,7 @@ scorch_batchnorm <- function(scorch_model,
 
     scorch_model$graph,
     name   = name,
-    module = list(bn_mod),
+    module = list(pool_mod),
     inputs = list(inputs)
   )
 

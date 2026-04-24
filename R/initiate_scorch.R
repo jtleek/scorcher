@@ -96,7 +96,7 @@ initiate_scorch <- function(dl = NULL) {
     dl        = NULL
   )
 
-  class(sm) <- "scorch_model"
+  class(sm) <- c("scorch_model", "list")
 
   #- If a dataloader is provided, validate and attach it.
 

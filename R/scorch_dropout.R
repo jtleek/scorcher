@@ -55,15 +55,18 @@ scorch_dropout <- function(scorch_model,
                            p = 0.5,
                            ...) {
 
-  do_mod <- torch::nn_dropout(p = p, ...)
-
   #- Resolve inputs when not specified explicitly.
 
   if (is.null(inputs)) {
 
     if (nrow(scorch_model$graph) == 0) {
 
-      if (length(scorch_model$inputs) != 1) {
+      if (length(scorch_model$inputs) == 0) {
+
+        stop("No inputs declared. Add at least one with scorch_input().",
+             call. = FALSE)
+
+      } else if (length(scorch_model$inputs) > 1) {
 
         stop("Must specify 'inputs' when multiple inputs exist.",
              call. = FALSE)
@@ -76,6 +79,14 @@ scorch_dropout <- function(scorch_model,
       inputs <- utils::tail(scorch_model$graph$name, 1)
     }
   }
+
+  #- Validate name before building the module.
+
+  if (name %in% scorch_model$graph$name || name %in% scorch_model$inputs)
+    stop("Node name '", name, "' already exists in the model graph.",
+         call. = FALSE)
+
+  do_mod <- torch::nn_dropout(p = p, ...)
 
   #- Append to graph.
 

@@ -5,7 +5,7 @@
 \title{Fit a Scorch Model}
 \usage{
 fit_scorch(
-  sm,
+  scorch_model,
   num_epochs = 10,
   verbose = TRUE,
   preprocess_fn = NULL,
@@ -15,7 +15,7 @@ fit_scorch(
 )
 }
 \arguments{
-\item{sm}{A compiled \code{scorch_model} object. Must have been
+\item{scorch_model}{A compiled \code{scorch_model} object. Must have been
 processed by \code{\link{compile_scorch}} before fitting.}
 
 \item{num_epochs}{Integer. Number of training epochs (default 10).}

@@ -58,12 +58,14 @@ Other model construction:
 \code{\link{scorch_attention}()},
 \code{\link{scorch_batchnorm}()},
 \code{\link{scorch_concat}()},
+\code{\link{scorch_conv_transpose}()},
 \code{\link{scorch_dropout}()},
 \code{\link{scorch_flatten}()},
 \code{\link{scorch_function}()},
 \code{\link{scorch_input}()},
 \code{\link{scorch_layer}()},
 \code{\link{scorch_output}()},
+\code{\link{scorch_pool}()},
 \code{\link{scorch_transformer_encoder}()}
 }
 \concept{model construction}

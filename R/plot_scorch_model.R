@@ -47,6 +47,10 @@ plot_scorch_model <- function(scorch_model,
          call. = FALSE)
   }
 
+  if (!isTRUE(scorch_model$compiled))
+    stop("Model must be compiled with compile_scorch() before plotting.",
+         call. = FALSE)
+
   nodes   <- scorch_model$graph$name
   inputs  <- scorch_model$inputs
   outputs <- scorch_model$outputs
