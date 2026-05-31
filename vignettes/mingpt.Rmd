@@ -1,0 +1,303 @@
+---
+title: "A Tiny GPT-Style Model with Scorcher"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{A Tiny GPT-Style Model with Scorcher}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+This vignette mirrors the character-level GPT example from
+[karpathy/minGPT](https://github.com/karpathy/minGPT) using `scorcher` graph
+functions. In minGPT, the `projects/chargpt` example trains a character-level
+language model from a user-provided `input.txt`, and the README points to
+tiny-shakespeare as the example text file. The model path is the same GPT
+pattern: turn characters and positions into numeric representations, let the
+model attend to earlier characters in the sequence, and predict the next
+character at each position.
+
+```{r setup}
+library(torch)
+library(scorcher)
+```
+
+## Tiny Shakespeare Character Data
+
+The model works at the character level. Each unique character in the text gets
+an integer id, and each training example contains a fixed-length context plus
+the next character at every position in that context.
+
+```{r data}
+input_path <- "input.txt"
+
+if (!file.exists(input_path)) {
+  download.file(
+    "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt",
+    input_path
+  )
+}
+
+text <- paste(readLines(input_path, warn = FALSE), collapse = "\n")
+chars <- sort(unique(strsplit(text, "")[[1]]))
+stoi <- setNames(seq_along(chars), chars)
+encoded <- unname(stoi[strsplit(text, "")[[1]]])
+split_at <- floor(0.9 * length(encoded))
+train_encoded <- encoded[seq_len(split_at)]
+validation_encoded <- encoded[(split_at + 1L):length(encoded)]
+
+block_size <- 128L
+make_xy <- function(encoded, block_size) {
+  starts <- seq_len(length(encoded) - block_size)
+  x <- do.call(rbind, lapply(starts, function(i) encoded[i:(i + block_size - 1)]))
+  y <- do.call(rbind, lapply(starts, function(i) encoded[(i + 1):(i + block_size)]))
+  list(
+    x = torch_tensor(x, dtype = torch_long()),
+    y = torch_tensor(y, dtype = torch_long())
+  )
+}
+
+xy <- make_xy(train_encoded, block_size)
+validation_xy <- make_xy(validation_encoded, block_size)
+dl <- scorch_create_dataloader(
+  xy$x,
+  xy$y,
+  batch_size = 64,
+  shuffle = TRUE,
+  input_dtype = torch_long(),
+  output_dtype = torch_long()
+)
+validation_dl <- scorch_create_dataloader(
+  validation_xy$x,
+  validation_xy$y,
+  batch_size = 64,
+  shuffle = FALSE,
+  input_dtype = torch_long(),
+  output_dtype = torch_long()
+)
+```
+
+## GPT Graph Pieces
+
+The graph below uses standard Scorch functions for the same pieces used in a
+small GPT-style block. Embeddings turn character ids and positions into numeric
+vectors. Causal self-attention lets each character look only at earlier
+characters, which is what makes next-character prediction valid. Residual paths
+are shortcut connections that help information move through the model.
+
+```{r blocks}
+token_positions <- function(idx, block_size) {
+  batch <- idx$shape[1]
+  positions <- torch_arange(1, block_size, dtype = torch_long())
+  positions$unsqueeze(1)$expand(c(batch, block_size))
+}
+
+scores_for_cross_entropy <- function(scores) scores$transpose(2, 3)
+```
+
+## Scorcher Graph
+
+```{r model}
+vocab_size <- length(chars)
+n_embd <- 192L
+n_head <- 6L
+
+model <- initiate_scorch(dl) |>
+  scorch_input(tokens) |>
+  scorch_layer(embedding,
+               num_embeddings = vocab_size,
+               embedding_dim = n_embd,
+               .from = tokens,
+               .name = token_emb) |>
+  scorch_function(token_positions,
+                  block_size = block_size,
+                  .from = tokens,
+                  .name = positions) |>
+  scorch_layer(embedding,
+               num_embeddings = block_size,
+               embedding_dim = n_embd,
+               .from = positions,
+               .name = position_emb) |>
+  scorch_add_skip(.from = c(token_emb, position_emb), .name = embeddings) |>
+  scorch_dropout(p = 0.1, .from = embeddings, .name = embedding_drop) |>
+  scorch_block(
+    layer_norm(normalized_shape = n_embd),
+    multihead_attention(
+      embed_dim = n_embd,
+      num_heads = n_head,
+      dropout = 0.1,
+      batch_first = TRUE,
+      causal = TRUE,
+      self_attention = TRUE
+    ),
+    dropout(p = 0.1),
+    residual = TRUE,
+    .from = embedding_drop,
+    .name = attention_block
+  ) |>
+  scorch_block(
+    layer_norm(normalized_shape = n_embd),
+    linear(in_features = n_embd, out_features = 4 * n_embd),
+    gelu(),
+    linear(in_features = 4 * n_embd, out_features = n_embd),
+    dropout(p = 0.1),
+    residual = TRUE,
+    .from = attention_block,
+    .name = mlp_block
+  ) |>
+  scorch_layer(layer_norm, normalized_shape = n_embd,
+               .from = mlp_block, .name = final_norm) |>
+  scorch_layer(linear,
+               in_features = n_embd,
+               out_features = vocab_size,
+               .from = final_norm,
+               .name = character_scores) |>
+  scorch_function(scores_for_cross_entropy,
+                  .from = character_scores,
+                  .name = scores_for_loss) |>
+  scorch_output(scores_for_loss)
+
+scorch_spec(model)
+plot(model, input_shapes = list(tokens = "batch x block_size"))
+```
+
+## Training
+
+Character-level GPT training is more computationally intensive than the small
+tabular examples. The workflow is the same: compile the graph with
+cross-entropy loss, fit it on batches of character ids, and snapshot the run
+for auditing. Cross-entropy loss compares the model's raw character scores with
+the correct next character.
+
+```{r train}
+scorch_fit <- model |>
+  compile_scorch(
+    loss_fn = nn_cross_entropy_loss(),
+    optimizer_fn = optim_adamw,
+    optimizer_params = list(lr = 5e-4)
+  ) |>
+  fit_scorch(num_epochs = 20, seed = 12345, verbose = TRUE)
+
+run <- scorch_snapshot(scorch_fit, data = text)
+scorch_audit(run)
+```
+
+## Evaluation
+
+First, score the trained model on text it did not train on. Lower validation
+loss and perplexity are better. Perplexity is a language-model score where
+smaller values mean the model is less surprised by the validation text.
+Next-character accuracy is a simple check of how often the model's most likely
+next character matches the real next character.
+
+```{r evaluate}
+loss_fn <- nn_cross_entropy_loss()
+total_loss <- 0
+total_tokens <- 0
+total_correct <- 0
+
+coro::loop(for (batch in validation_dl) {
+  scores <- scorch_predict(scorch_fit, batch$input)
+  targets <- batch$output[[1]]
+
+  loss <- loss_fn(scores, targets)
+  n_tokens <- prod(as.numeric(targets$shape))
+
+  predictions <- torch_argmax(scores, dim = 2)
+  correct <- torch_sum(
+    (predictions == targets)$to(dtype = torch_float())
+  )$item()
+
+  total_loss <- total_loss + loss$item() * n_tokens
+  total_tokens <- total_tokens + n_tokens
+  total_correct <- total_correct + correct
+})
+
+validation_loss <- total_loss / total_tokens
+
+data.frame(
+  validation_loss = validation_loss,
+  perplexity = exp(validation_loss),
+  next_character_accuracy = total_correct / total_tokens
+)
+```
+
+Then inspect the model qualitatively by asking it to continue a validation
+passage that was not used for training.
+
+```{r seed-text}
+seed_tokens <- validation_xy$x[1, ]$unsqueeze(1)
+seed_ids <- as.integer(as_array(seed_tokens$squeeze(1)))
+seed_text <- paste(chars[seed_ids], collapse = "")
+
+cat(seed_text)
+```
+
+```{r generate}
+generated <- seed_tokens$clone()
+n_new <- 600
+temperature <- 0.9
+
+for (i in seq_len(n_new)) {
+  current_length <- as.integer(generated$shape[2])
+  start <- max(1L, current_length - block_size + 1L)
+  context <- generated[, start:current_length]
+
+  scores <- scorch_predict(
+    scorch_fit,
+    input = list(tokens = context)
+  )
+
+  next_scores <- scores[, , as.integer(scores$shape[3])] / temperature
+  probabilities <- nnf_softmax(next_scores, dim = 2)
+  next_id <- torch_multinomial(probabilities, num_samples = 1)
+
+  generated <- torch_cat(
+    list(generated, next_id$to(dtype = torch_long())),
+    dim = 2
+  )
+}
+
+generated_ids <- as.integer(as_array(generated$squeeze(1)))
+generated_text <- paste(chars[generated_ids], collapse = "")
+
+cat(generated_text)
+```
+
+After a short CPU run, the output may only resemble Shakespeare locally through
+common character patterns and short words. Longer training, a larger model, or
+GPU training should make the samples more coherent.
+
+The same graph can be converted for use with `luz`. The validation dataloader,
+which contains text that was not used for training, can then be passed to
+`luz::evaluate()`:
+
+```{r luz}
+torch_module <- as_torch(model)
+luz_dl <- torch::dataloader(
+  torch::tensor_dataset(xy$x, xy$y),
+  batch_size = 64,
+  shuffle = TRUE
+)
+luz_validation_dl <- torch::dataloader(
+  torch::tensor_dataset(validation_xy$x, validation_xy$y),
+  batch_size = 64,
+  shuffle = FALSE
+)
+
+luz_fit <- torch_module |>
+  luz::setup(
+    loss = nn_cross_entropy_loss(),
+    optimizer = optim_adamw
+  ) |>
+  luz::fit(data = luz_dl, epochs = 20)
+
+luz::evaluate(luz_fit, data = luz_validation_dl)
+```

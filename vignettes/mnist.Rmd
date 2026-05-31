@@ -19,7 +19,16 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-This vignette demonstrates how to use the `scorcher` package to fit a convolutional neural network using the [MNIST](https://github.com/mlverse/torchvision/blob/main/R/dataset-mnist.R) dataset, which consists of handwritten digits from 0 to 9. The MNIST dataset included in the [torchvision](https://torchvision.mlverse.org/) package contains 70,000 grayscale images of handwritten digits, each 28x28 pixels in size. It is divided into 60,000 training images and 10,000 testing images. The goal is to classify these images into one of the 10 digit categories (0-9). In this vignette, we will preprocess the data, create a neural network model, and evaluate its performance.
+This vignette builds a small convolutional neural network for handwritten digit
+classification. A convolutional neural network is designed for image data
+because it looks for local visual patterns such as edges and curves. MNIST
+images are 28 by 28 grayscale pictures of digits from 0 to 9, and the goal is
+to assign each image to the correct digit class.
+
+The example focuses on the pieces that are common in image classification:
+loading image tensors, adding convolution and pooling layers, flattening the
+image representation, training by comparing predicted digit scores with the
+true digit labels, and checking both accuracy and example predictions.
 
 <br>
 
@@ -27,7 +36,8 @@ This vignette demonstrates how to use the `scorcher` package to fit a convolutio
 
 ### Installing and Loading Required Packages
 
-Before we begin, ensure that you have the necessary packages installed. You can install them using the following commands:
+Before we begin, ensure that you have the necessary packages installed. 
+You can install them using the following commands:
 
 ```{r install, eval = FALSE}
 install.packages("torch")
@@ -35,7 +45,10 @@ install.packages("torchvision")
 install.packages("scorcher")
 ```
 
-Additionally, you'll need to install torch dependencies. Follow the instructions provided [here](https://torch.mlverse.org/start/installation/) to install torch. Then, you can load the `scorcher` library and the other necessary libraries for this analysis with:
+Additionally, you'll need to install the system dependencies used by R `torch`.
+Follow the R `torch` installation instructions
+[here](https://torch.mlverse.org/start/installation/). Then load the packages
+used in this analysis:
 
 ```{r setup}
 library(torch)
@@ -45,7 +58,10 @@ library(scorcher)
 
 ### Loading the Data
 
-We'll now load the MNIST dataset and preprocess it for training and testing:
+The training images are converted to floating-point tensors and given an
+explicit channel dimension. A tensor is the data format used by `torch`; here,
+each tensor stores many 28 by 28 images. The labels are stored as integer digit
+values, so they use `torch_long()`.
 
 ```{r data}
 # Training data
@@ -65,7 +81,8 @@ y_train <- torch_tensor(train_data$targets, dtype = torch_long())
 
 ### Visualizing the Data
 
-Let's visualize some samples from the training dataset.
+Before modeling, it is useful to inspect a few images to confirm that the data
+were loaded and reshaped as expected.
 
 ```{r plt1}
 # Visualizing the MNIST training data
@@ -82,28 +99,33 @@ for (i in 1:4) {
 
 ### Defining the Neural Network
 
-Next, we'll define our neural network using the `scorcher` package.
+The graph below follows a standard image classification shape: convolutional
+layers look for local visual patterns, pooling makes the image representation
+smaller, dropout randomly hides some intermediate values during training, and
+fully connected layers return one score per digit.
 
 ```{r}
 # Create the dataloader
 
 dl <- scorch_create_dataloader(x_train, y_train, batch_size = 500)
 
+# The dataloader feeds the model 500 images at a time.
+
 # Define the neural network
 
 scorch_model <- initiate_scorch(dl) |>
-  scorch_input("x") |>
-  scorch_layer("conv1", "conv2d", in_channels = 1, out_channels = 32, kernel_size = 3) |>
-  scorch_layer("act1", "relu") |>
-  scorch_layer("conv2", "conv2d", in_channels = 32, out_channels = 64, kernel_size = 3) |>
-  scorch_layer("act2", "relu") |>
-  scorch_layer("pool1", "max_pool2d", kernel_size = 2) |>
-  scorch_dropout("drop1", p = 0.25) |>
-  scorch_flatten("flat1") |>
-  scorch_layer("fc1", "linear", in_features = 9216, out_features = 128) |>
-  scorch_layer("act3", "relu") |>
-  scorch_layer("fc2", "linear", in_features = 128, out_features = 10) |>
-  scorch_output("fc2") |>
+  scorch_input(x) |>
+  scorch_layer(conv2d, in_channels = 1, out_channels = 32, kernel_size = 3) |>
+  scorch_layer(relu) |>
+  scorch_layer(conv2d, in_channels = 32, out_channels = 64, kernel_size = 3) |>
+  scorch_layer(relu) |>
+  scorch_layer(max_pool2d, kernel_size = 2) |>
+  scorch_dropout(p = 0.25) |>
+  scorch_flatten() |>
+  scorch_layer(linear, in_features = 9216, out_features = 128) |>
+  scorch_layer(relu) |>
+  scorch_layer(linear, in_features = 128, out_features = 10) |>
+  scorch_output() |>
   compile_scorch(
     loss_fn          = nn_cross_entropy_loss(),
     optimizer_fn     = optim_adam,
@@ -113,16 +135,36 @@ scorch_model <- initiate_scorch(dl) |>
 
 ### Training the Neural Network
 
-We'll train our neural network on the training data.
+The compiled graph is trained directly with `fit_scorch()`. Cross-entropy loss
+compares the model's raw digit scores with the correct digit labels.
 
 ```{r}
 scorch_model <- scorch_model |>
-  fit_scorch(num_epochs = 10, verbose = FALSE)
+  fit_scorch(num_epochs = 10, verbose = TRUE)
+```
+
+The same graph can be converted for use with `luz`:
+
+```{r luz, eval=FALSE}
+torch_module <- as_torch(scorch_model)
+luz_dl <- torch::dataloader(
+  torch::tensor_dataset(x_train, y_train),
+  batch_size = 500,
+  shuffle = TRUE
+)
+
+luz_fit <- torch_module |>
+  luz::setup(
+    loss = nn_cross_entropy_loss(),
+    optimizer = optim_adam
+  ) |>
+  luz::fit(data = luz_dl, epochs = 10)
 ```
 
 ### Evaluating the Model
 
-Finally, we'll evaluate our model on the test data.
+Evaluation uses the official MNIST test split. `scorch_evaluate()` handles
+evaluation mode, prediction, and accuracy calculation.
 
 ```{r}
 # Testing data
@@ -138,43 +180,58 @@ x_test <- torch_tensor(test_data$data, dtype = torch_float()) |>
 
 y_test <- torch_tensor(test_data$targets, dtype = torch_long())
 
-# Model predictions
+scorch_evaluate(
+  scorch_model,
+  input = x_test,
+  truth = y_test,
+  metric = "accuracy"
+)
+```
 
-scorch_model$nn_model$eval()
+For a model trained with `luz`, use `luz::evaluate()` on a regular torch
+dataloader:
 
-output <- scorch_model$nn_model(x_test)
-pred <- torch_argmax(output, dim = 2)
+```{r luz-evaluate, eval=FALSE}
+luz_test_dl <- torch::dataloader(
+  torch::tensor_dataset(x_test, y_test),
+  batch_size = 500
+)
 
-accuracy <- sum(pred == y_test)$item() / length(y_test)
-cat(sprintf("Test Accuracy: %.2f%%\n", accuracy * 100))
+luz::evaluate(luz_fit, data = luz_test_dl)
 ```
 
 ### Visualizing the Predictions 
 
-We can also visualize our predictions:
+A few individual predictions make the numeric accuracy easier to interpret.
+The title above each image shows the digit predicted by the fitted model.
 
 ```{r}
 # Visualizing some of the predictions
 
 par(mfrow = c(2, 2), mar = c(1, 1, 1.5, 1), pty = "s")
 
-with_no_grad({
-  for (i in 1:4) {
-    img <- x_test[i, , drop = F] |> as.array() 
-    prediction <- scorch_model$nn_model(
-      torch_tensor(img, dtype = torch_float())) |> torch_argmax(dim = 2) - 1
-    img_mat <- matrix(img, nrow = 28)
-    image(t(img_mat[nrow(img_mat):1, ]), axes = F, col = gray.colors(256), 
-      main = paste("Predicted Value:", prediction$item()))
-  }
-})
+predictions <- scorch_predict(scorch_model, x_test[1:4, , , ])
+predicted_classes <- torch_argmax(predictions, dim = 2) - 1
+
+for (i in 1:4) {
+  img <- x_test[i, , drop = F] |> as.array()
+  img_mat <- matrix(img, nrow = 28)
+  image(
+    t(img_mat[nrow(img_mat):1, ]),
+    axes = FALSE,
+    col = gray.colors(256),
+    main = paste("Predicted Value:", predicted_classes[i]$item())
+  )
+}
 ```
 
 ## Conclusion
 
-In this vignette, we successfully trained a neural network on the MNIST dataset using the `scorcher` package We demonstrated data preprocessing, model definition, training, and evaluation steps. With further tuning and experimentation, you can improve the model's performance and explore more complex architectures.
-
-For more information on `torch`, visit the [torch documentation](https://torch.mlverse.org/).
+This example showed how to build an image classifier with Scorcher: load image
+data, define a convolutional graph, train by comparing digit scores with known
+labels, evaluate accuracy, and inspect individual predictions. The same
+structure can be adapted to other small image classification datasets by
+changing the input shape and number of output classes.
 
 ## References
 

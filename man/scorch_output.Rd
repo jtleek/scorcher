@@ -4,7 +4,7 @@
 \alias{scorch_output}
 \title{Mark Output Nodes on a Scorch Model}
 \usage{
-scorch_output(scorch_model, outputs)
+scorch_output(scorch_model, outputs = NULL)
 }
 \arguments{
 \item{scorch_model}{A \code{scorch_model} object created by
@@ -37,16 +37,17 @@ matching these output names.
 \dontrun{
 # Single output
 model <- model |>
-  scorch_output("fc_out")
+  scorch_output(fc_out)
 
 # Multi-output (e.g., regression head + classification head)
 model <- model |>
-  scorch_output(c("reg_head", "cls_head"))
+  scorch_output(c(reg_head, cls_head))
 }
 
 }
 \seealso{
 Other model construction: 
+\code{\link{as_torch_module}()},
 \code{\link{compile_scorch}()},
 \code{\link{initiate_scorch}()},
 \code{\link{plot_scorch_model}()},
@@ -54,14 +55,18 @@ Other model construction:
 \code{\link{scorch_add_skip}()},
 \code{\link{scorch_attention}()},
 \code{\link{scorch_batchnorm}()},
+\code{\link{scorch_block}()},
 \code{\link{scorch_concat}()},
 \code{\link{scorch_conv_transpose}()},
 \code{\link{scorch_dropout}()},
 \code{\link{scorch_flatten}()},
 \code{\link{scorch_function}()},
+\code{\link{scorch_graph_data}()},
 \code{\link{scorch_input}()},
 \code{\link{scorch_layer}()},
 \code{\link{scorch_pool}()},
-\code{\link{scorch_transformer_encoder}()}
+\code{\link{scorch_spec}()},
+\code{\link{scorch_transformer_encoder}()},
+\code{\link{validate_scorch_graph}()}
 }
 \concept{model construction}

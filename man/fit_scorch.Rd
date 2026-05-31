@@ -11,6 +11,8 @@ fit_scorch(
   preprocess_fn = NULL,
   clip_grad = NULL,
   clip_params = list(),
+  device = "auto",
+  seed = NULL,
   ...
 )
 }
@@ -77,5 +79,10 @@ model <- fit_scorch(
 )
 }
 
+}
+\seealso{
+Other model training: 
+\code{\link{as_torch}()},
+\code{\link{as_luz_module}()}
 }
 \concept{model training}

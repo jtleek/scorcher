@@ -7,11 +7,13 @@
 scorch_transformer_encoder(
   scorch_model,
   name,
-  inputs,
+  inputs = NULL,
   embed_dim,
   num_heads,
   dim_feedforward = 2048,
   dropout = 0.1,
+  .name = NULL,
+  .from = NULL,
   ...
 )
 }
@@ -70,6 +72,7 @@ model <- model |>
 }
 \seealso{
 Other model construction: 
+\code{\link{as_torch_module}()},
 \code{\link{compile_scorch}()},
 \code{\link{initiate_scorch}()},
 \code{\link{plot_scorch_model}()},
@@ -77,14 +80,18 @@ Other model construction:
 \code{\link{scorch_add_skip}()},
 \code{\link{scorch_attention}()},
 \code{\link{scorch_batchnorm}()},
+\code{\link{scorch_block}()},
 \code{\link{scorch_concat}()},
 \code{\link{scorch_conv_transpose}()},
 \code{\link{scorch_dropout}()},
 \code{\link{scorch_flatten}()},
 \code{\link{scorch_function}()},
+\code{\link{scorch_graph_data}()},
 \code{\link{scorch_input}()},
 \code{\link{scorch_layer}()},
 \code{\link{scorch_output}()},
-\code{\link{scorch_pool}()}
+\code{\link{scorch_pool}()},
+\code{\link{scorch_spec}()},
+\code{\link{validate_scorch_graph}()}
 }
 \concept{model construction}

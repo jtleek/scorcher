@@ -34,15 +34,15 @@
 #'
 #' @details
 #' This is equivalent to calling
-#' \code{scorch_layer(model, name, "dropout", inputs, p = 0.5)} but
+#' \code{scorch_layer(model, dropout, .from = input, p = 0.5)} but
 #' provides a more readable API for a common operation.
 #'
 #' @examples
 #' \dontrun{
 #' model <- model |>
-#'   scorch_layer("fc1", "linear", in_features = 32, out_features = 16) |>
-#'   scorch_layer("act1", "relu") |>
-#'   scorch_dropout("drop1", p = 0.3)
+#'   scorch_layer(linear, in_features = 32, out_features = 16) |>
+#'   scorch_layer(relu) |>
+#'   scorch_dropout(p = 0.3)
 #' }
 #'
 #' @family model construction
@@ -53,52 +53,46 @@ scorch_dropout <- function(scorch_model,
                            name,
                            inputs = NULL,
                            p = 0.5,
+                           .name = NULL,
+                           .from = NULL,
                            ...) {
 
-  #- Resolve inputs when not specified explicitly.
+  scorch_model <- scorch_check_model(scorch_model)
 
-  if (is.null(inputs)) {
+  name_expr <- if (missing(.name)) NULL else substitute(.name)
+  legacy_name_expr <- if (missing(name)) NULL else substitute(name)
+  from_expr <- if (missing(.from)) NULL else substitute(.from)
+  inputs_expr <- if (missing(inputs)) NULL else substitute(inputs)
 
-    if (nrow(scorch_model$graph) == 0) {
+  inputs <- scorch_resolve_inputs(
+    scorch_model,
+    inputs = if (is.null(inputs_expr)) NULL else
+      scorch_parse_refs_expr(inputs_expr, arg = "inputs"),
+    from = if (is.null(from_expr)) NULL else
+      scorch_parse_refs_expr(from_expr, arg = ".from")
+  )
 
-      if (length(scorch_model$inputs) == 0) {
-
-        stop("No inputs declared. Add at least one with scorch_input().",
-             call. = FALSE)
-
-      } else if (length(scorch_model$inputs) > 1) {
-
-        stop("Must specify 'inputs' when multiple inputs exist.",
-             call. = FALSE)
-      }
-
-      inputs <- scorch_model$inputs
-
-    } else {
-
-      inputs <- utils::tail(scorch_model$graph$name, 1)
-    }
-  }
-
-  #- Validate name before building the module.
-
-  if (name %in% scorch_model$graph$name || name %in% scorch_model$inputs)
-    stop("Node name '", name, "' already exists in the model graph.",
-         call. = FALSE)
+  node_name <- scorch_prepare_node_name(
+    scorch_model,
+    explicit_expr = name_expr,
+    legacy_expr = legacy_name_expr,
+    auto_prefix = "dropout"
+  )
+  scorch_model <- node_name$model
+  name <- node_name$name
 
   do_mod <- torch::nn_dropout(p = p, ...)
 
-  #- Append to graph.
-
-  scorch_model$graph <- tibble::add_row(
-
-    scorch_model$graph,
-    name   = name,
-    module = list(do_mod),
-    inputs = list(inputs)
+  scorch_add_graph_node(
+    scorch_model,
+    name = name,
+    module = do_mod,
+    inputs = inputs,
+    node_type = "layer",
+    constructor = "dropout",
+    args = c(list(p = p), list(...)),
+    explicit_name = node_name$explicit
   )
-
-  scorch_model
 }
 
 #=== END =======================================================================

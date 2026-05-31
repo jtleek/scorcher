@@ -2,42 +2,60 @@
 % Please edit documentation in R/plot_scorch_model.R
 \name{plot_scorch_model}
 \alias{plot_scorch_model}
+\alias{plot.scorch_model}
 \title{Plot a Scorch Model Architecture}
 \usage{
-plot_scorch_model(scorch_model, detailed = FALSE)
+plot_scorch_model(
+  scorch_model,
+  detail = c("full", "simple"),
+  detailed = NULL,
+  rankdir = c("TB", "LR"),
+  input_shapes = NULL,
+  ...
+)
+
+\method{plot}{scorch_model}(x, ...)
 }
 \arguments{
-\item{scorch_model}{A compiled \code{scorch_model} object.}
+\item{scorch_model}{A \code{scorch_model} object.}
 
-\item{detailed}{Logical. If \code{TRUE}, show weight dimensions
-next to each node label. Default \code{FALSE}.}
+\item{x}{A \code{scorch_model} object.}
+
+\item{detail}{How much to show in each node. \code{"simple"} shows only the
+layer type. \code{"full"} adds the node name, upstream inputs, parameter
+counts, and dimensions that can be inferred from layer arguments.}
+
+\item{detailed}{Deprecated logical alias for \code{detail}. Use
+\code{detail = "full"} or \code{detail = "simple"}.}
+
+\item{rankdir}{Graphviz rank direction. Defaults to \code{"TB"} for
+top-to-bottom diagrams. Use \code{"LR"} for left-to-right diagrams.}
+
+\item{input_shapes}{Optional named list or named character vector of input
+shapes to display, for example \code{list(features = "batch x 4")}.}
+
+\item{...}{Additional arguments passed from \code{plot()} to
+\code{plot_scorch_model()}.}
 }
 \value{
-A \code{DiagrammeR} htmlwidget object (rendered
-automatically in interactive sessions).
+A \code{DiagrammeR} htmlwidget object.
 }
 \description{
-Renders the Scorch model computation graph as a directed graph
-using Graphviz via the DiagrammeR package. Input nodes are shown
-as ovals, output nodes as double circles, and all other nodes as
-boxes.
-}
-\details{
-Requires the DiagrammeR package to be installed. If it is not
-available, the function raises an informative error.
-
-Nodes are laid out left-to-right (\code{rankdir=LR}). Edges
-follow the \code{inputs} declared in the graph tibble.
+Renders a publication-ready Scorch model architecture diagram using Graphviz
+via the DiagrammeR package. The diagram shows inputs, layers, outputs,
+upstream connections, parameter counts, and dimensions that can be inferred
+from layer arguments.
 }
 \examples{
 \dontrun{
-plot_scorch_model(model)
-plot_scorch_model(model, detailed = TRUE)
+plot(model)
+plot(model, detail = "simple")
+plot(model, detail = "full", input_shapes = list(features = "batch x 4"))
+plot_scorch_model(model, rankdir = "LR")
 }
-
 }
 \seealso{
-Other model construction: 
+Other model construction:
 \code{\link{compile_scorch}()},
 \code{\link{initiate_scorch}()},
 \code{\link{print.scorch_model}()},

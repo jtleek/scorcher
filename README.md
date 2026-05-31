@@ -1,176 +1,171 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# scorcher: Blazing a trail for effortless model building with torch in R
+# scorcher
 
 <!-- badges: start -->
 
 <!-- badges: end -->
 
-### <img src="man/figures/scorcher.png" align="right" height="200" style="float:right; height:200px;"/>
+`scorcher` provides a high-level, declarative workflow for building R
+`torch` models. A `scorcher` model is written as a graph: declare the
+inputs, add layers or functions in the order data flows through them,
+and mark the output nodes. That graph remains inspectable throughout
+modeling, training, plotting, and auditing.
 
-### Overview
+In `scorcher`, a graph is a diagram-like record of the model. Each named
+step in the graph is a node, and the connections between nodes show how
+information moves from inputs to predictions.
 
-The `scorcher` package provides high-level functionality for building
-and fitting deep learning models using the Torch library in R. By
-simplifying model development through easy-to-use functions and ensuring
-compatibility with existing R workflows and data structures, scorcher
-facilitates the use of deep learning without the need for extensive
-programming knowledge.
+Models are defined with `scorcher` graph functions such as
+`scorch_layer()`, `scorch_function()`, `scorch_concat()`, and
+`scorch_add_skip()`. The same graph can be trained with the lightweight
+`fit_scorch()` loop or converted with `as_torch()` for use with `luz`.
 
-The package allows users to create, modify, and visualize models through
-functions such as `initiate_scorch`, `scorch_layer`, `compile_scorch`,
-and `fit_scorch`. The package flexibly handles tasks such as prediction,
-classification, computer vision, diffusion, and more.
+## Why Neural Networks Fit This Workflow
 
-### Installation
+Neural networks are flexible prediction models built from many small
+mathematical steps. Each step transforms the data a little: one layer
+might combine input variables, another might add a nonlinear bend,
+another might drop information during training to reduce overfitting,
+and a final layer turns the learned representation into a prediction.
 
-You can install the development version of scorcher from
-[GitHub](https://github.com/) with:
+That step-by-step structure makes neural networks a natural fit for
+tidy, pipe-based R code. With Scorcher, a model reads from top to bottom
+in the same order the data moves through it:
+
+- `initiate_scorch()` starts the model object.
+- `scorch_input()` declares what data enters the model.
+- `scorch_layer()`, `scorch_function()`, `scorch_block()` add modeling
+  steps.
+- `scorch_output()` declares what the model should return.
+- `compile_scorch()` and `fit_scorch()` train the model.
+
+This keeps the code close to the mental model: start with data, pass it
+through named steps, inspect the architecture, train, and evaluate. For
+applied research workflows, that makes the model easier to read, easier
+to plot, and easier to audit later.
+
+## Installation
 
 ``` r
 # install.packages("pak")
 pak::pak("jtleek/scorcher")
 ```
 
-### Getting Started
+## A Small Model Graph
 
-``` r
-library(scorcher)
-```
-
-#### Example: Classifying MNIST Images
-
-Here is an example where we build a convolutional neural network using
-the
-[MNIST](https://github.com/mlverse/torchvision/blob/main/R/dataset-mnist.R)
-dataset, which contains 70,000 grayscale images of handwritten digits,
-from 0 to 9. The goal is to classify these images into one of the 10
-digit categories (0-9).
-
-**1. Prepare the Training Data:**
+A Scorcher model starts with a dataloader: an object that feeds small
+groups of examples to the model during training. The graph below takes
+four numeric features, passes them through a hidden layer and a
+nonlinear step, applies dropout, and ends with a one-number prediction.
+Dropout randomly hides some intermediate values during training, which
+can help the model rely less on any single feature pattern.
 
 ``` r
 library(torch)
-library(torchvision)
+library(scorcher)
+
+x <- torch_randn(100, 4)
+y <- torch_randn(100, 1)
+dl <- scorch_create_dataloader(x, y, batch_size = 16)
+
+model <- initiate_scorch(dl) |>
+  scorch_input(features) |>
+  scorch_layer(linear, in_features = 4, out_features = 16) |>
+  scorch_layer(relu) |>
+  scorch_dropout(p = 0.1) |>
+  scorch_layer(linear, in_features = 16, out_features = 1, .name = prediction) |>
+  scorch_output()
+
+scorch_spec(model)
+validate_scorch_graph(model)
+plot(model, detail = "full", input_shapes = list(features = "batch x 4"))
+plot(model, detail = "simple")
 ```
 
+Unnamed nodes are deterministic: `linear_1`, `relu_1`, `dropout_1`, and
+so on. Use `.name = prediction` when a stable semantic name matters. Use
+`.from = ...` to branch or merge graph paths.
+
+## Graph Blocks
+
+Blocks are useful when several layers form one conceptual unit. In this
+example, `scorch_block()` builds a small residual MLP block from
+ordinary torch layer types. The input to the block is added back to the
+block output because `residual = TRUE`. A residual connection is a
+shortcut: the block learns a change to apply while still keeping the
+original incoming information.
+
 ``` r
-#- Training Data
-
-train_data <- mnist_dataset(
-  root = tempdir(),
-  download = TRUE,
-  transform = transform_to_tensor)
-
-x_train <- torch_tensor(train_data$data, dtype = torch_float()) |> 
-  torch_unsqueeze(2)
-
-y_train <- torch_tensor(train_data$targets, dtype = torch_long())
+model <- initiate_scorch(dl) |>
+  scorch_input(features) |>
+  scorch_layer(linear, in_features = 4, out_features = 16, .name = hidden) |>
+  scorch_block(
+    linear(in_features = 16, out_features = 16),
+    gelu(),
+    residual = TRUE,
+    .from = hidden,
+    .name = residual
+  ) |>
+  scorch_layer(linear, in_features = 16, out_features = 1, .name = prediction) |>
+  scorch_output(prediction)
 ```
 
-**Example Training Images:**
+## Training And Reproducibility
 
-<img src="man/figures/README-plt1-1.png" width="100%" />
-
-#### Defining the Neural Network
-
-Next, we’ll define our neural network using the `scorcher` package.
-
-**2. Create the Dataloader:**
+After the graph structure is clear, `compile_scorch()` attaches the loss
+and optimizer, and `fit_scorch()` trains the model. The loss is the
+number the model tries to make smaller, and the optimizer is the rule
+used to update model weights. The fitted object records the training
+history, device, seed, and runtime metadata.
 
 ``` r
-#- Create the Dataloader
-
-dl <- scorch_create_dataloader(x_train, y_train, batch_size = 500)
-```
-
-**3. Define the Scorcher Model:**
-
-``` r
-#- Define the Neural Network
-
-scorch_model <- initiate_scorch(dl) |>
-  scorch_input("x") |>
-  scorch_layer("conv1", "conv2d", in_channels = 1, out_channels = 32, kernel_size = 3) |>
-  scorch_layer("act1", "relu") |>
-  scorch_layer("conv2", "conv2d", in_channels = 32, out_channels = 64, kernel_size = 3) |>
-  scorch_layer("act2", "relu") |>
-  scorch_layer("pool1", "max_pool2d", kernel_size = 2) |>
-  scorch_dropout("drop1", p = 0.25) |>
-  scorch_flatten("flat1") |>
-  scorch_layer("fc1", "linear", in_features = 9216, out_features = 128) |>
-  scorch_layer("act3", "relu") |>
-  scorch_layer("fc2", "linear", in_features = 128, out_features = 10) |>
-  scorch_output("fc2")
-```
-
-Node names (like `"conv1"`, `"fc1"`) are unique identifiers that wire
-the computation graph – they let nodes reference each other for
-branching, fusion, and skip connections. See `vignette("scorch_layer")`
-for naming conventions.
-
-**4. Compile the Model:**
-
-``` r
-#- Compile the Neural Network
-
-scorch_model <- scorch_model |>
+scorch_fit <- model |>
   compile_scorch(
-    loss_fn          = nn_cross_entropy_loss(),
-    optimizer_fn     = optim_adam,
-    optimizer_params = list(lr = 0.001)
-  )
+    loss_fn = nn_mse_loss(),
+    optimizer_fn = optim_adam,
+    optimizer_params = list(lr = 1e-3)
+  ) |>
+  fit_scorch(num_epochs = 5, seed = 1)
+
+run <- scorch_snapshot(scorch_fit, data = x)
+scorch_audit(run)
+autoplot(run, type = "history")
 ```
 
-**5. Train the Model**
+The same graph can also be converted for use with `luz`. Use a regular
+torch dataloader that yields inputs and the answers the model should
+learn to predict.
 
 ``` r
-#-- Training the Neural Network
-
-scorch_model <- scorch_model |>
-  fit_scorch(num_epochs = 10, verbose = TRUE)
-```
-
-**6. Evaluate the Model**
-
-Finally, we’ll evaluate our model on the testing data.
-
-``` r
-#- Testing Data
-
-test_data <- mnist_dataset(
-  root = tempdir(),
-  train = FALSE,
-  transform = transform_to_tensor
+torch_module <- as_torch(model)
+luz_dl <- torch::dataloader(
+  torch::tensor_dataset(x, y),
+  batch_size = 16
 )
 
-x_test <- torch_tensor(test_data$data, dtype = torch_float()) |> 
-  torch_unsqueeze(2)
-
-y_test <- torch_tensor(test_data$targets, dtype = torch_long())
-
-#- Model Predictions
-
-scorch_model$nn_model$eval()
-
-pred <- scorch_model$nn_model(x_test) |> torch_argmax(dim = 2)
-
-accuracy <- sum(pred == y_test)$item() / length(y_test)
-
-cat(sprintf("Testing Accuracy: %.2f%%\n", accuracy * 100))
-#> Testing Accuracy: 98.59%
+luz_fit <- torch_module |>
+  luz::setup(
+    loss = nn_mse_loss(),
+    optimizer = optim_adam
+  ) |>
+  luz::fit(data = luz_dl, epochs = 5)
 ```
 
-**Example Predictions Images:**
+## Advanced Examples
 
-<img src="man/figures/README-plt2-1.png" width="100%" />
+See:
 
-### Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request
-on GitHub.
-
-### License
-
-This project is licensed under the MIT License.
+- `vignette("scorch_layer")` for lower-level graph construction
+  examples.
+- `vignette("palmer-penguins")` for a complete tabular classification
+  workflow with preprocessing, fitting, auditing, and evaluation.
+- `vignette("mnist")` for an image-classification workflow with
+  convolutional layers, which are layers designed to find local image
+  patterns.
+- `vignette("diffusion")` for a `scorcher` reproduction of
+  [tanelp/tiny-diffusion](https://github.com/tanelp/tiny-diffusion).
+- `vignette("mingpt")` for a `scorcher` mirror of minGPT’s [chargpt
+  tiny-shakespeare
+  example](https://github.com/karpathy/minGPT/blob/master/projects/chargpt/readme.md).

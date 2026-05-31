@@ -12,6 +12,8 @@ scorch_conv_transpose(
   out_channels,
   kernel_size,
   type = "2d",
+  .name = NULL,
+  .from = NULL,
   ...
 )
 }
@@ -56,7 +58,7 @@ autoencoders, and generative models.
 }
 \details{
 This is equivalent to calling
-\code{scorch_layer(model, name, "conv_transpose2d", ...)} but
+\code{scorch_layer(model, conv_transpose2d, ...)} but
 provides a more readable API with a \code{type} parameter for
 selecting dimensionality.
 }
@@ -64,13 +66,12 @@ selecting dimensionality.
 \dontrun{
 # 2D transposed convolution for upsampling
 model <- model |>
-  scorch_conv_transpose("deconv1",
-                        in_channels = 64, out_channels = 32,
+  scorch_conv_transpose(in_channels = 64, out_channels = 32,
                         kernel_size = 4, stride = 2, padding = 1)
 
 # 1D transposed convolution for sequence generation
 model <- model |>
-  scorch_conv_transpose("deconv1", type = "1d",
+  scorch_conv_transpose(type = "1d",
                         in_channels = 128, out_channels = 64,
                         kernel_size = 3)
 }
@@ -78,6 +79,7 @@ model <- model |>
 }
 \seealso{
 Other model construction: 
+\code{\link{as_torch_module}()},
 \code{\link{compile_scorch}()},
 \code{\link{initiate_scorch}()},
 \code{\link{plot_scorch_model}()},
@@ -85,14 +87,18 @@ Other model construction:
 \code{\link{scorch_add_skip}()},
 \code{\link{scorch_attention}()},
 \code{\link{scorch_batchnorm}()},
+\code{\link{scorch_block}()},
 \code{\link{scorch_concat}()},
 \code{\link{scorch_dropout}()},
 \code{\link{scorch_flatten}()},
 \code{\link{scorch_function}()},
+\code{\link{scorch_graph_data}()},
 \code{\link{scorch_input}()},
 \code{\link{scorch_layer}()},
 \code{\link{scorch_output}()},
 \code{\link{scorch_pool}()},
-\code{\link{scorch_transformer_encoder}()}
+\code{\link{scorch_spec}()},
+\code{\link{scorch_transformer_encoder}()},
+\code{\link{validate_scorch_graph}()}
 }
 \concept{model construction}

@@ -90,28 +90,15 @@ compile_scorch <- function(scorch_model,
                            optimizer_fn     = torch::optim_adam,
                            optimizer_params = list(lr = 1e-3)) {
 
+  scorch_model <- scorch_check_model(scorch_model)
+
   graph   <- scorch_model$graph
   inputs  <- scorch_model$inputs
   outputs <- scorch_model$outputs
 
   #- Validate model before compiling.
 
-  if (length(inputs) == 0)
-    stop("Model has no inputs. Add at least one with scorch_input().",
-         call. = FALSE)
-
-  if (nrow(graph) == 0)
-    stop("Model has no layers. Add at least one with scorch_layer().",
-         call. = FALSE)
-
-  if (length(outputs) == 0)
-    stop("Model has no outputs. Mark at least one with scorch_output().",
-         call. = FALSE)
-
-  bad_outputs <- setdiff(outputs, graph$name)
-  if (length(bad_outputs) > 0)
-    stop("Output node(s) not found in graph: ",
-         paste(bad_outputs, collapse = ", "), call. = FALSE)
+  validate_scorch_graph(scorch_model)
 
   if (is.list(loss_fn) && length(outputs) > 1) {
     missing_loss <- setdiff(outputs, names(loss_fn))
@@ -123,58 +110,7 @@ compile_scorch <- function(scorch_model,
   #- Build the nn_module by registering all graph nodes as sub-modules
   #- and defining the forward pass as a graph traversal.
 
-  mod <- torch::nn_module(
-
-    initialize = function() {
-
-      for (i in seq_len(nrow(graph))) {
-
-        self[[graph$name[i]]] <- graph$module[[i]]
-      }
-    },
-
-    forward = function(...) {
-
-      args <- list(...)
-
-      env  <- new.env(parent = emptyenv())
-
-      #- Assign inputs to the environment.
-
-      if (length(inputs) == 1) {
-
-        env[[inputs]] <- args[[1]]
-
-      } else {
-
-        for (nm in names(args)) env[[nm]] <- args[[nm]]
-      }
-
-      #- Compute each node in graph order.
-
-      for (i in seq_len(nrow(graph))) {
-
-        node    <- graph[i, ]
-
-        in_vals <- lapply(node$inputs[[1]], function(nm) env[[nm]])
-
-        out     <- do.call(self[[node$name]], in_vals)
-
-        env[[node$name]] <- out
-      }
-
-      #- Return outputs.
-
-      if (length(outputs) == 1) {
-
-        env[[outputs]]
-
-      } else {
-
-        purrr::map(outputs, ~ env[[.x]])
-      }
-    }
-  )
+  mod <- scorch_build_module(graph = graph, inputs = inputs, outputs = outputs)
 
   #- Instantiate the module, optimizer, and attach everything.
 

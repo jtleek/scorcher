@@ -1,10 +1,12 @@
 Package: scorcher
-Title: What the Package Does (One Line, Title Case)
+Title: Declarative, Reproducible Workflows for Torch Models
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"),
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
+    person("Scorcher", "authors", role = c("aut", "cre"))
+Description: Build, inspect, train, visualize, and snapshot graph-based
+    torch models from R. Scorcher provides a pipeable model graph workflow
+    with deterministic node naming, reusable architecture blocks, and
+    reproducibility metadata for experiments and production workflows.
 Depends: R (>= 4.1.0)
 License: MIT + file LICENSE
 Encoding: UTF-8
@@ -13,22 +15,30 @@ RoxygenNote: 7.3.3
 Imports:
     coro,
     crayon,
+    digest,
     dplyr,
+    ggplot2,
     purrr,
+    rlang,
     tibble,
     tools,
     torch,
     utils
 Config/Needs/website: rmarkdown
 Suggests: 
+    covr,
     datasauRus,
     DiagrammeR,
     ggimage,
     knitr,
+    luz,
     palmerpenguins,
     rmarkdown,
+    testthat (>= 3.0.0),
     tensorflow,
     tfdatasets,
     tidyverse,
-    torchvision
+    torchvision,
+    withr
 VignetteBuilder: knitr
+Config/testthat/edition: 3

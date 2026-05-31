@@ -35,12 +35,12 @@
 #' \dontrun{
 #' # Single input
 #' model <- initiate_scorch() |>
-#'   scorch_input("features")
+#'   scorch_input(features)
 #'
 #' # Multi-input (e.g., two feature streams for late fusion)
 #' model <- initiate_scorch() |>
-#'   scorch_input("stream_a") |>
-#'   scorch_input("stream_b")
+#'   scorch_input(stream_a) |>
+#'   scorch_input(stream_b)
 #' }
 #'
 #' @family model construction
@@ -49,11 +49,15 @@
 
 scorch_input <- function(scorch_model, name) {
 
+  scorch_model <- scorch_check_model(scorch_model)
+  name <- scorch_parse_name_expr(substitute(name), arg = "name")
+
   #- Validate: no duplicate input names.
 
-  if (name %in% scorch_model$inputs) {
+  if (name %in% c(scorch_model$inputs, scorch_model$graph$name)) {
 
-    stop("Input '", name, "' already exists.", call. = FALSE)
+    stop("Input '", name, "' already exists in the model graph.",
+         call. = FALSE)
   }
 
   scorch_model$inputs <- c(scorch_model$inputs, name)

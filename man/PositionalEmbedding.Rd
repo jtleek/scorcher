@@ -4,10 +4,13 @@
 \alias{PositionalEmbedding}
 \title{Positional Embedding Wrapper}
 \usage{
-PositionalEmbedding(size, type, ...)
+PositionalEmbedding(size = NULL, type = "sinusoidal", ..., emb_size = NULL)
 }
 \arguments{
 \item{size}{The dimension of the embedding.}
+
+\item{emb_size}{Optional alias for \code{size}. This is accepted for diffusion
+examples that mirror tiny-diffusion naming.}
 
 \item{type}{The type of embedding to use, such as "sinusoidal", "linear",
 "learnable", "zero", or "identity".}

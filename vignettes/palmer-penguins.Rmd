@@ -22,7 +22,17 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-This vignette demonstrates how to use the `scorcher` package to fit a neural network using the [Palmer Penguins](https://allisonhorst.github.io/palmerpenguins/index.html) dataset. The Palmer Penguins dataset consists of data collected by [Dr. Kristen Gorman](https://www.uaf.edu/cfos/people/faculty/detail/kristen-gorman.php) and the [Palmer Station, Antarctica LTER](https://pallter.marine.rutgers.edu/), and includes observations on three species of penguins: Adelie, Chinstrap, and Gentoo. The dataset contains 344 observations with seven variables: species, island (Biscoe, Dream, Torgersen), bill length (mm), bill depth (mm), flipper length (mm), body mass (g), and sex (male, female). This dataset is a wonderful alternative to the [Iris](https://www.rdocumentation.org/packages/datasets/versions/3.6.2/topics/iris) dataset and provides an excellent resource for exploring various statistical and machine learning techniques, particularly due to its inclusion of both numerical and categorical data. In this vignette, we will train a neural network on the penguins' bill length and depth, flipper length, body mass, sex, and island to predict their species.
+This vignette walks through a complete classification workflow with
+`scorcher`. The task is to predict penguin species from a mix of numeric
+measurements and categorical variables in the
+[Palmer Penguins](https://allisonhorst.github.io/palmerpenguins/index.html)
+dataset.
+
+The example is intentionally small and concrete. It shows how to prepare a
+tabular dataset, create tensors, define a graph, inspect the architecture,
+train the model, audit the run, and evaluate accuracy on test data that was not
+used for training. A tensor is the data format used by `torch`; for this
+example, it is essentially a numeric matrix with a type attached.
 
 <br>
 
@@ -45,7 +55,10 @@ install.packages("scorcher")
 install.packages("palmerpenguins")
 ```
 
-Additionally, you'll need to install torch dependencies. Follow the instructions provided [here](https://torch.mlverse.org/start/installation/) to install torch. Then, you can load the `scorcher` library and the other necessary libraries for this analysis with:
+Additionally, you'll need to install the system dependencies used by R `torch`.
+Follow the R `torch` installation instructions
+[here](https://torch.mlverse.org/start/installation/). Then load the packages
+used in this analysis:
 
 ```{r setup}
 library(tidyverse)
@@ -62,13 +75,7 @@ We'll now load the Palmer Penguins dataset.
 ```{r}
 data("penguins")
 
-# Removing rows with missing values for simplicity
-
-penguins <- na.omit(penguins)
-
-# Print the first few rows of the data
-
-head(penguins)
+head(penguins) # Print the first few rows of the data
 ```
 
 ### Visualizing the Data
@@ -77,9 +84,6 @@ Let's visualize the dataset to better understand its structure and relationships
 
 ```{r, fig.width=6, fig.height=4}
 # Visualizing the Palmer Penguins data
-
-library(tidyverse)
-library(ggimage)
 
 penguins |>
   ggplot(aes(x = bill_length_mm, y = bill_depth_mm)) +
@@ -105,21 +109,27 @@ penguins |>
 
 ### Data Preprocessing
 
-For our neural network, we need to preprocess the data. This includes normalizing the numerical features and encoding the categorical features.
+For a neural network, every input needs to be numeric. The preprocessing below
+removes incomplete rows, standardizes the continuous measurements, and encodes
+categorical variables as integer levels.
 
 ```{r}
-# Normalizing numerical features
 
-penguins$bill_length_mm <- scale(penguins$bill_length_mm)
-penguins$bill_depth_mm <- scale(penguins$bill_depth_mm)
-penguins$flipper_length_mm <- scale(penguins$flipper_length_mm)
-penguins$body_mass_g <- scale(penguins$body_mass_g)
+penguins <- penguins |>
+  
+  drop_na() |> # Removing rows with missing values for simplicity
+  
+  mutate( 
+    across( # Normalizing numerical features
+      c(bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g),
+      ~ as.numeric(scale(.x))
+    ),
+    across( # Encoding categorical features
+      c(species, island, sex),
+      ~ as.integer(as.factor(.x))
+    )
+  )
 
-# Encoding categorical features
-
-penguins$species <- as.integer(as.factor(penguins$species)) 
-penguins$island <- as.integer(as.factor(penguins$island))
-penguins$sex <- as.integer(as.factor(penguins$sex))
 ```
 
 ### Creating Training and Test Sets
@@ -138,7 +148,10 @@ test_data <- penguins[-train_indices, ]
 
 ### Defining the Neural Network
 
-Next, we'll define our neural network using the `scorcher` package.
+The model below uses the seven prepared predictors as input and returns three
+class scores, one for each species. The largest score is the model's predicted
+species. During training, cross-entropy loss compares those raw scores with the
+correct species label and gives the model a number to reduce.
 
 ```{r}
 # Create the dataloader
@@ -151,18 +164,23 @@ dl <- scorch_create_dataloader(x_train, y_train, batch_size = 32)
 # Define the neural network
 
 scorch_model <- initiate_scorch(dl) |>
-  scorch_input("x") |>
-  scorch_layer("fc1", "linear", in_features = 7, out_features = 16) |>
-  scorch_layer("act1", "relu") |>
-  scorch_layer("fc2", "linear", in_features = 16, out_features = 8) |>
-  scorch_layer("act2", "relu") |>
-  scorch_layer("fc3", "linear", in_features = 8, out_features = 3) |>
-  scorch_output("fc3")
+  scorch_input(x) |>
+  scorch_layer(linear, in_features = 7, out_features = 16) |>
+  scorch_layer(relu) |>
+  scorch_layer(linear, in_features = 16, out_features = 8) |>
+  scorch_layer(relu) |>
+  scorch_layer(linear, in_features = 8, out_features = 3, .name = species_scores) |>
+  scorch_output()
+
+plot(scorch_model, detail = "full", input_shapes = list(x = "batch x 7"))
 ```
 
 ### Training the Neural Network
 
-We'll train our neural network on the training data.
+Training combines the graph, loss function, optimizer, and dataloader. A
+dataloader feeds the model small groups of rows at a time. Because the three
+species are not perfectly balanced, the loss uses class weights computed from
+the training set so that less common species still matter during training.
 
 ```{r}
 # Define weights for imbalanced classes
@@ -184,33 +202,76 @@ scorch_model <- scorch_model |>
 # Fit the neural network
 
 scorch_model <- scorch_model |>
-  fit_scorch(num_epochs = 200, verbose = FALSE)
+  fit_scorch(num_epochs = 200, verbose = TRUE)
+
+run <- scorch_snapshot(
+  scorch_model,
+  data = list(features = x_train, labels = y_train),
+  config = list(dataset = "palmerpenguins", epochs = 200)
+)
+
+scorch_audit(run)
+autoplot(run, type = "history")
+```
+
+The same graph can be converted for use with `luz`. Use a regular torch
+dataloader for `luz`, so each batch contains predictors and the correct species
+labels.
+
+```{r luz, eval=FALSE}
+torch_module <- as_torch(scorch_model)
+luz_dl <- torch::dataloader(
+  torch::tensor_dataset(x_train, y_train),
+  batch_size = 32,
+  shuffle = TRUE
+)
+
+luz_fit <- torch_module |>
+  luz::setup(
+    loss = nn_cross_entropy_loss(),
+    optimizer = optim_adam
+  ) |>
+  luz::fit(data = luz_dl, epochs = 200)
 ```
 
 ### Evaluating the Model
 
-Finally, we'll evaluate our model on the test data.
+Evaluation uses the test set that was not used for training.
+`scorch_evaluate()` switches the fitted model into evaluation mode, runs
+prediction, and computes the requested metric.
 
 ```{r}
-
-scorch_model$nn_model$eval()
-
 x_test <- torch_tensor(as.matrix(test_data[, -1]), dtype = torch_float())
 y_test <- torch_tensor(as.integer(test_data$species), dtype = torch_long())
 
-output <- scorch_model$nn_model(x_test)
-pred <- torch_argmax(output, dim = 2)
+scorch_evaluate(
+  scorch_model,
+  input = x_test,
+  truth = y_test,
+  metric = "accuracy"
+)
+```
 
-accuracy <- sum(pred == y_test)$item() / length(y_test)
-cat(sprintf("Test Accuracy: %.2f%%\n", accuracy * 100))
+For a model trained with `luz`, use `luz::evaluate()` on a regular torch
+dataloader:
+
+```{r luz-evaluate, eval=FALSE}
+luz_test_dl <- torch::dataloader(
+  torch::tensor_dataset(x_test, y_test),
+  batch_size = 32
+)
+
+luz::evaluate(luz_fit, data = luz_test_dl)
 
 ```
 
 ## Conclusion
 
-In this vignette, we demonstrated how to use the `scorcher` package to fit a neural network on the Palmer Penguins dataset. We covered data preprocessing, model definition, training, and evaluation. It is our hope that the `scorcher` package provides an easy-to-use and flexible framework for building and training neural networks with `torch` in R.
-
-For more information on `torch`, visit the [torch documentation](https://torch.mlverse.org/).
+This example showed the main steps for tabular classification with Scorcher:
+prepare numeric data for `torch`, define the model graph, train by comparing
+class scores with known labels, audit the run, and evaluate accuracy. The same
+pattern can be adapted to other tabular classification problems by changing the
+preprocessing, input dimension, and number of output classes.
 
 ## References
 

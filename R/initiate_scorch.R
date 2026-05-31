@@ -52,11 +52,11 @@
 #'
 #' \preformatted{
 #' model <- initiate_scorch(dl) |>
-#'   scorch_input("input") |>
-#'   scorch_layer("fc1", "linear", in_features = 10, out_features = 32) |>
-#'   scorch_layer("act1", "relu") |>
-#'   scorch_layer("fc2", "linear", in_features = 32, out_features = 1) |>
-#'   scorch_output("fc2") |>
+#'   scorch_input(input) |>
+#'   scorch_layer(linear, in_features = 10, out_features = 32) |>
+#'   scorch_layer(relu) |>
+#'   scorch_layer(linear, in_features = 32, out_features = 1) |>
+#'   scorch_output() |>
 #'   compile_scorch()
 #' }
 #'
@@ -83,9 +83,7 @@ initiate_scorch <- function(dl = NULL) {
 
   sm <- list(
 
-    graph     = tibble::tibble(name    = character(),
-                               module  = list(),
-                               inputs  = list()),
+    graph     = scorch_empty_graph(),
 
     inputs    = character(),
     outputs   = character(),
@@ -93,7 +91,10 @@ initiate_scorch <- function(dl = NULL) {
     nn_model  = NULL,
     optimizer = NULL,
     loss_fn   = NULL,
-    dl        = NULL
+    dl        = NULL,
+    auto_name_counts = list(),
+    history   = NULL,
+    metadata  = list()
   )
 
   class(sm) <- c("scorch_model", "list")

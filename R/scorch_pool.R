@@ -50,9 +50,9 @@
 #' \dontrun{
 #' # Max pooling after conv2d
 #' model <- model |>
-#'   scorch_layer("conv1", "conv2d", in_channels = 3, out_channels = 16,
+#'   scorch_layer(conv2d, in_channels = 3, out_channels = 16,
 #'                kernel_size = 3) |>
-#'   scorch_pool("pool1", kernel_size = 2)
+#'   scorch_pool(kernel_size = 2)
 #'
 #' # Adaptive average pooling to fixed output size
 #' model <- model |>
@@ -72,38 +72,33 @@ scorch_pool <- function(scorch_model,
                         inputs = NULL,
                         method = "max",
                         type = "2d",
+                        .name = NULL,
+                        .from = NULL,
                         ...) {
 
-  #- Resolve inputs when not specified explicitly.
+  scorch_model <- scorch_check_model(scorch_model)
 
-  if (is.null(inputs)) {
+  name_expr <- if (missing(.name)) NULL else substitute(.name)
+  legacy_name_expr <- if (missing(name)) NULL else substitute(name)
+  from_expr <- if (missing(.from)) NULL else substitute(.from)
+  inputs_expr <- if (missing(inputs)) NULL else substitute(inputs)
 
-    if (nrow(scorch_model$graph) == 0) {
+  inputs <- scorch_resolve_inputs(
+    scorch_model,
+    inputs = if (is.null(inputs_expr)) NULL else
+      scorch_parse_refs_expr(inputs_expr, arg = "inputs"),
+    from = if (is.null(from_expr)) NULL else
+      scorch_parse_refs_expr(from_expr, arg = ".from")
+  )
 
-      if (length(scorch_model$inputs) == 0) {
-
-        stop("No inputs declared. Add at least one with scorch_input().",
-             call. = FALSE)
-
-      } else if (length(scorch_model$inputs) > 1) {
-
-        stop("Must specify 'inputs' when multiple inputs exist.",
-             call. = FALSE)
-      }
-
-      inputs <- scorch_model$inputs
-
-    } else {
-
-      inputs <- utils::tail(scorch_model$graph$name, 1)
-    }
-  }
-
-  #- Validate name before building the module.
-
-  if (name %in% scorch_model$graph$name || name %in% scorch_model$inputs)
-    stop("Node name '", name, "' already exists in the model graph.",
-         call. = FALSE)
+  node_name <- scorch_prepare_node_name(
+    scorch_model,
+    explicit_expr = name_expr,
+    legacy_expr = legacy_name_expr,
+    auto_prefix = paste(method, type, "pool", sep = "_")
+  )
+  scorch_model <- node_name$model
+  name <- node_name$name
 
   #- Dispatch to the correct pooling function.
 
@@ -131,15 +126,16 @@ scorch_pool <- function(scorch_model,
 
   #- Append to graph.
 
-  scorch_model$graph <- tibble::add_row(
-
-    scorch_model$graph,
-    name   = name,
-    module = list(pool_mod),
-    inputs = list(inputs)
+  scorch_add_graph_node(
+    scorch_model,
+    name = name,
+    module = pool_mod,
+    inputs = inputs,
+    node_type = "layer",
+    constructor = paste0(method, "_pool", type),
+    args = c(list(method = method, type = type), list(...)),
+    explicit_name = node_name$explicit
   )
-
-  scorch_model
 }
 
 #=== END =======================================================================

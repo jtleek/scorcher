@@ -37,7 +37,7 @@
 #'
 #' @details
 #' This is equivalent to calling
-#' \code{scorch_layer(model, name, "flatten", start_dim = 2)} but
+#' \code{scorch_layer(model, flatten, start_dim = 2)} but
 #' provides a more readable API for a common operation. The default
 #' \code{start_dim = 2} preserves the batch dimension (dim 1) and
 #' flattens everything else.
@@ -46,9 +46,8 @@
 #' \dontrun{
 #' # After convolutional layers, flatten before a linear layer
 #' model <- model |>
-#'   scorch_flatten("flat", inputs = "pool2") |>
-#'   scorch_layer("fc1", "linear",
-#'                in_features = 128, out_features = 64)
+#'   scorch_flatten(.from = pool2) |>
+#'   scorch_layer(linear, in_features = 128, out_features = 64)
 #' }
 #'
 #' @family model construction
@@ -59,54 +58,48 @@ scorch_flatten <- function(scorch_model,
                            name,
                            inputs = NULL,
                            start_dim = 2,
-                           end_dim = -1) {
+                           end_dim = -1,
+                           .name = NULL,
+                           .from = NULL) {
 
-  #- Resolve inputs when not specified explicitly.
+  scorch_model <- scorch_check_model(scorch_model)
 
-  if (is.null(inputs)) {
+  name_expr <- if (missing(.name)) NULL else substitute(.name)
+  legacy_name_expr <- if (missing(name)) NULL else substitute(name)
+  from_expr <- if (missing(.from)) NULL else substitute(.from)
+  inputs_expr <- if (missing(inputs)) NULL else substitute(inputs)
 
-    if (nrow(scorch_model$graph) == 0) {
+  inputs <- scorch_resolve_inputs(
+    scorch_model,
+    inputs = if (is.null(inputs_expr)) NULL else
+      scorch_parse_refs_expr(inputs_expr, arg = "inputs"),
+    from = if (is.null(from_expr)) NULL else
+      scorch_parse_refs_expr(from_expr, arg = ".from")
+  )
 
-      if (length(scorch_model$inputs) == 0) {
-
-        stop("No inputs declared. Add at least one with scorch_input().",
-             call. = FALSE)
-
-      } else if (length(scorch_model$inputs) > 1) {
-
-        stop("Must specify 'inputs' when multiple inputs exist.",
-             call. = FALSE)
-      }
-
-      inputs <- scorch_model$inputs
-
-    } else {
-
-      inputs <- utils::tail(scorch_model$graph$name, 1)
-    }
-  }
-
-  #- Validate name before building the module.
-
-  if (name %in% scorch_model$graph$name || name %in% scorch_model$inputs)
-    stop("Node name '", name, "' already exists in the model graph.",
-         call. = FALSE)
+  node_name <- scorch_prepare_node_name(
+    scorch_model,
+    explicit_expr = name_expr,
+    legacy_expr = legacy_name_expr,
+    auto_prefix = "flatten"
+  )
+  scorch_model <- node_name$model
+  name <- node_name$name
 
   #- Instantiate the flatten module.
 
   flatten_mod <- torch::nn_flatten(start_dim = start_dim, end_dim = end_dim)
 
-  #- Append to graph.
-
-  scorch_model$graph <- tibble::add_row(
-
-    scorch_model$graph,
-    name    = name,
-    module  = list(flatten_mod),
-    inputs  = list(inputs)
+  scorch_add_graph_node(
+    scorch_model,
+    name = name,
+    module = flatten_mod,
+    inputs = inputs,
+    node_type = "layer",
+    constructor = "flatten",
+    args = list(start_dim = start_dim, end_dim = end_dim),
+    explicit_name = node_name$explicit
   )
-
-  scorch_model
 }
 
 #=== END =======================================================================

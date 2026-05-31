@@ -20,11 +20,24 @@ library(scorcher)
 
 ## Introduction
 
-The `scorch_layer` function is a versatile tool for adding named layers to a Scorch model graph in `R`. It supports any `torch::nn_*` layer type and can be combined with `scorch_add_skip` for residual connections. This vignette will guide you through the usage of `scorch_layer` with real-world data, demonstrating how to build and train models using the `mtcars` dataset.
+This vignette introduces the basic graph-building workflow in `scorcher`.
+The central idea is to describe the model as a sequence of named nodes: inputs
+enter the graph, layers and functions transform those inputs, and one or more
+outputs define what the model returns during training or prediction.
+
+In this vignette, a graph means a diagram-like recipe for the model, and a node
+means one named step in that recipe. Naming the steps makes the model easier to
+plot, inspect, and connect.
+
+The examples use the small `mtcars` dataset so that the full workflow is easy
+to inspect: prepare numeric data for `torch`, define the graph, plot the
+architecture, train the model, and compare predictions with observed values.
 
 ## Prerequisites
 
-Before using `scorch_layer`, ensure that you have the following packages installed and loaded:
+Load `torch` for numeric model data and neural-network layers, `scorcher` for
+graph construction and training, and `tidyverse` for the small amount of data
+preparation and plotting used here.
 
 ```{r}
 library(scorcher)
@@ -35,38 +48,75 @@ library(tidyverse)
 ## Naming Nodes
 
 In scorcher's graph-based architecture, every node needs a unique name.
-These names are how the graph wires nodes together. When you write
-`inputs = c("act2", "act1")`, the graph knows exactly which upstream
+These names are how the graph connects steps together. When you write
+`.from = c(act2, act1)`, the graph knows exactly which upstream
 outputs to pass forward. This is what enables multi-input models, parallel
 branches, skip connections, and fusion architectures.
 
 Names are arbitrary -- you can use whatever makes sense to you. The only
 rule is that each name must be unique within the model. That said,
 descriptive names help with debugging because they appear in error messages
-and in `plot_scorch_model()` output.
+and in `plot()` output.
 
 Here are some common naming conventions:
 
 | Prefix | Meaning | Layers |
 |--------|---------|--------|
 | `fc`   | fully connected | `nn_linear` |
-| `conv` | convolution | `nn_conv1d`, `nn_conv2d` |
-| `act`  | activation | `nn_relu`, `nn_gelu`, `nn_sigmoid` |
-| `pool` | pooling | `nn_max_pool2d`, `nn_avg_pool1d` |
-| `bn`   | batch normalization | `nn_batch_norm1d` |
-| `drop` | dropout | `nn_dropout` |
+| `conv` | convolution, used mostly for image or sequence patterns | `nn_conv1d`, `nn_conv2d` |
+| `act`  | nonlinear step, such as ReLU or GELU | `nn_relu`, `nn_gelu`, `nn_sigmoid` |
+| `pool` | pooling, used to shrink image or sequence representations | `nn_max_pool2d`, `nn_avg_pool1d` |
+| `bn`   | batch normalization, used to stabilize intermediate values | `nn_batch_norm1d` |
+| `drop` | dropout, which randomly hides some values during training | `nn_dropout` |
 | `flat` | flatten | `nn_flatten` |
 | `attn` | attention | `nn_multihead_attention` |
 | `enc`  | encoder | `nn_transformer_encoder_layer` |
-| `res`  | residual/skip | `scorch_add_skip` |
-| `emb`  | embedding | `nn_embedding` |
+| `res`  | residual/skip | `scorch_add_skip`, `scorch_block` |
+| `emb`  | embedding, used to turn ids into numeric vectors | `nn_embedding` |
+
+Multi-head attention can be added with `scorch_layer()` directly. Attention is
+a layer that lets each position in a sequence compare itself with other
+positions. Pass the query, key, and value nodes through `.from`.
+
+```{r attention-example, eval=FALSE}
+attention_model <- initiate_scorch() |>
+  scorch_input(embeddings) |>
+  scorch_layer(multihead_attention,
+               embed_dim = 64,
+               num_heads = 4,
+               .from = c(embeddings, embeddings, embeddings),
+               .name = self_attention) |>
+  scorch_output(self_attention)
+```
+
+For repeated pieces, use `scorch_block()` with unquoted layer calls. This keeps
+common architecture patterns readable while still expanding to ordinary graph
+nodes.
+
+```{r block-example, eval=FALSE}
+model <- initiate_scorch() |>
+  scorch_input(features) |>
+  scorch_layer(linear, in_features = 10, out_features = 64, .name = hidden) |>
+  scorch_block(
+    linear(in_features = 64, out_features = 64),
+    gelu(),
+    residual = TRUE,
+    repeats = 2,
+    .from = hidden,
+    .name = residual_stack
+  ) |>
+  scorch_output(residual_stack)
+```
 
 Add a number suffix when you have multiples of the same type: `conv1`,
 `conv2`, `fc1`, `fc2`, and so on.
 
 ## Data Preparation: `mtcars` Dataset
 
-For this vignette, we’ll use the `mtcars` dataset, which contains various car attributes such as miles per gallon (mpg), horsepower (hp), and weight (wt). We will build a simple neural network to predict `mpg` from `hp` and `wt`.
+For this vignette, we use the `mtcars` dataset. The response is miles per
+gallon (`mpg`), and the predictors are horsepower (`hp`) and weight (`wt`).
+The predictors are standardized before training so that both inputs are on a
+similar scale.
 
 ```{r}
 # Prepare the data
@@ -83,7 +133,7 @@ dat <- mtcars |>
     
     wt = scale(wt))
 
-# Convert to torch tensors
+# Convert to torch tensors, the numeric data format used by torch
 
 x <- dat[, c("hp", "wt")] |>
   
@@ -98,7 +148,9 @@ y <- y$unsqueeze(2)
 
 ## Building a Simple Neural Network
 
-Let's start by building a simple neural network using `scorch_layer` to predict `mpg` from `hp` and `wt`.
+The model begins with one input node named `x`. Each `scorch_layer()` call adds
+the next model step. Because these layers form a straight sequence, only the
+input and output need explicit names.
 
 ```{r}
 
@@ -110,15 +162,15 @@ dl <- scorch_create_dataloader(x, y, batch_size = 32)
 
 scorch_model <- initiate_scorch(dl) |>
   
-  scorch_input("x") |>
+  scorch_input(x) |>
   
-  scorch_layer("fc1", "linear", in_features = 2, out_features = 16) |>
+  scorch_layer(linear, in_features = 2, out_features = 16) |>
   
-  scorch_layer("act1", "relu") |>
+  scorch_layer(relu) |>
   
-  scorch_layer("fc2", "linear", in_features = 16, out_features = 1) |>
+  scorch_layer(linear, in_features = 16, out_features = 1) |>
   
-  scorch_output("fc2")
+  scorch_output()
 
 # View the model architecture
 
@@ -127,12 +179,14 @@ print(scorch_model)
 
 This network consists of:
 
-- A hidden layer with 16 units and ReLU activation.
+- A hidden layer with 16 units and ReLU, a common nonlinear step.
 - An output layer with 1 unit (to predict `mpg`).
 
 ## Adding a Residual Block
 
-Next, let's build a model with the above architecture and an added residual block. A residual connection is a technique where the input to a block of layers is added directly to the block's output. This creates a shortcut path, or "skip connection," that allows the original input to bypass one or more layers. Residual connections are beneficial for training deep networks because they help mitigate the vanishing gradient problem by allowing gradients to flow more easily through the network.
+A residual connection adds the input to a block back to the block's output.
+This gives the model a shortcut path and can make deeper models easier to
+train. In Scorcher, `scorch_block()` is a compact way to write that pattern.
 
 ```{r}
 
@@ -140,35 +194,38 @@ Next, let's build a model with the above architecture and an added residual bloc
 
 scorch_model <- initiate_scorch(dl) |>
   
-  scorch_input("x") |>
+  scorch_input(x) |>
   
-  scorch_layer("fc1", "linear", in_features = 2, out_features = 16) |>
+  scorch_layer(linear, in_features = 2, out_features = 16, .name = hidden) |>
   
-  scorch_layer("act1", "relu") |>
+  scorch_block(
+    linear(in_features = 16, out_features = 16),
+    relu(),
+    residual = TRUE,
+    .from = hidden,
+    .name = residual
+  ) |>
   
-  scorch_layer("fc2", "linear", inputs = "act1", in_features = 16, out_features = 16) |>
+  scorch_layer(linear, in_features = 16, out_features = 1) |>
   
-  scorch_layer("act2", "relu") |>
-  
-  scorch_add_skip("res1", inputs = c("act2", "act1")) |>
-  
-  scorch_layer("fc3", "linear", in_features = 16, out_features = 1) |>
-  
-  scorch_output("fc3")
+  scorch_output()
 
 print(scorch_model)
   
 ```
 
-This model now includes:
+This model includes:
 
-- Two linear layers with ReLU activations.
+- Two linear layers with ReLU nonlinear steps.
 - A residual connection that adds the input directly to the output of the block.
 
 ## Training the Model
 
-Now that the model is built, we can train it using the `mtcars` data. We will 
-use the Mean Squared Error (MSE) loss function and the Adam optimizer.
+Training starts by attaching a loss function and optimizer to the graph. The
+loss is the number the model tries to make smaller. For a continuous outcome
+such as `mpg`, mean squared error measures the average squared prediction
+error. The optimizer is the rule used to update model weights; Adam is a useful
+default.
 
 ```{r}
 
@@ -184,19 +241,50 @@ scorch_model <- scorch_model |>
   
   fit_scorch(num_epochs = 300, verbose = FALSE)
 
+# Or convert the same graph for use with luz:
+torch_module <- as_torch(scorch_model)
+luz_dl <- torch::dataloader(
+  torch::tensor_dataset(x, y),
+  batch_size = 32,
+  shuffle = TRUE
+)
+
+luz_fit <- torch_module |>
+  luz::setup(
+    loss = nn_mse_loss(),
+    optimizer = optim_adam
+  ) |>
+  luz::fit(data = luz_dl, epochs = 300)
+
 ```
 
 ## Evaluating the Model
 
-After training, we can evaluate the model’s performance by comparing the predicted `mpg` values with the actual values.
+After training, evaluate the fitted model by comparing predicted `mpg` values
+with the observed values. `scorch_evaluate()` handles evaluation mode and
+prediction internally, so the model object can be used directly.
 
 ```{r}
 # Make predictions
 
-scorch_model$nn_model$eval()
+scorch_evaluate(
+  scorch_model,
+  input = x,
+  truth = y,
+  metric = "mse"
+)
 
-y_pred <- scorch_model$nn_model(x) |> as_array()
+y_pred <- scorch_predict(scorch_model, x) |> as_array() |> as.numeric()
+```
 
+For a model trained with `luz`, use `luz::evaluate()` on a regular torch
+dataloader. A dataloader feeds the model small groups of examples at a time:
+
+```{r luz-evaluate, eval=FALSE}
+luz::evaluate(luz_fit, data = luz_dl)
+```
+
+```{r}
 # Plot the actual vs predicted mpg
 
 plt_dat <- data.frame(actual = mtcars$mpg, predicted = y_pred)
@@ -222,4 +310,7 @@ The plot shows how well the model's predictions align with the actual `mpg` valu
 
 ## Conclusion
 
-The `scorch_layer` function simplifies the process of building complex neural network architectures in `R`. By providing a flexible way to define both simple layers and residual blocks, it allows you to experiment with different model configurations easily. This vignette has demonstrated how to use `scorch_layer` with real data, covering basic usage, residual connections, and model training.
+This vignette covered the core `scorcher` workflow: prepare numeric data for
+`torch`, declare a model graph, inspect the architecture, train the model, and
+evaluate predictions. The same pattern extends from simple regression models to
+branched models, residual blocks, attention layers, and other graph structures.

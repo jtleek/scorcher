@@ -262,11 +262,7 @@ scorch_load <- function(path,
 
   graph <- if (!is.null(payload$graph)) {
 
-    tibble::tibble(
-      name   = payload$graph$name,
-      module = payload$graph$module,
-      inputs = payload$graph$inputs
-    )
+    scorch_ensure_graph_schema(tibble::as_tibble(payload$graph))
 
   } else {
 

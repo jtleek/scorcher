@@ -1,0 +1,51 @@
+url: https://jtleek.github.io/scorcher/
+template:
+  bootstrap: 5
+
+reference:
+  - title: Model graphs
+    contents:
+      - initiate_scorch
+      - scorch_input
+      - scorch_layer
+      - scorch_block
+      - scorch_function
+      - scorch_output
+      - scorch_spec
+      - validate_scorch_graph
+      - as_torch_module
+      - as_torch
+      - as_luz_module
+  - title: Graph helpers
+    contents:
+      - scorch_add_skip
+      - scorch_concat
+      - scorch_flatten
+      - scorch_dropout
+      - scorch_batchnorm
+      - scorch_pool
+      - scorch_attention
+      - scorch_transformer_encoder
+  - title: Training and reproducibility
+    contents:
+      - fit_scorch
+      - scorch_predict
+      - scorch_evaluate
+      - scorch_evaluate_predictions
+      - scorch_snapshot
+      - scorch_audit
+      - scorch_save_run
+      - scorch_load_run
+      - scorch_compare_runs
+  - title: Plotting
+    contents:
+      - plot_scorch_model
+      - scorch_graph_data
+      - autoplot.scorch_model
+      - autoplot.scorch_run
+  - title: Experimental helpers
+    contents:
+      - starts_with("scorch_2d_diffusion")
+      - NoiseScheduler
+      - scorch_tfrecord
+      - scorch_read_wfdb_file

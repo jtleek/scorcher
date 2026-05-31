@@ -4,7 +4,7 @@
 \alias{scorch_add_skip}
 \title{Add a Skip Connection Node to a Scorch Model}
 \usage{
-scorch_add_skip(scorch_model, name, inputs)
+scorch_add_skip(scorch_model, name, inputs = NULL, .name = NULL, .from = NULL)
 }
 \arguments{
 \item{scorch_model}{A \code{scorch_model} object created by
@@ -42,30 +42,36 @@ replaces the old \code{use_residual} argument in
 \dontrun{
 # Residual connection around a linear + relu block
 model <- model |>
-  scorch_layer("fc1", "linear", inputs = "x",
-               in_features = 32, out_features = 32) |>
-  scorch_layer("act1", "relu") |>
-  scorch_add_skip("res1", inputs = c("act1", "x"))
+  scorch_layer(linear, .from = x,
+               in_features = 32, out_features = 32,
+               .name = update) |>
+  scorch_layer(relu, .name = activated) |>
+  scorch_add_skip(.from = c(activated, x), .name = residual)
 }
 
 }
 \seealso{
 Other model construction: 
+\code{\link{as_torch_module}()},
 \code{\link{compile_scorch}()},
 \code{\link{initiate_scorch}()},
 \code{\link{plot_scorch_model}()},
 \code{\link{print.scorch_model}()},
 \code{\link{scorch_attention}()},
 \code{\link{scorch_batchnorm}()},
+\code{\link{scorch_block}()},
 \code{\link{scorch_concat}()},
 \code{\link{scorch_conv_transpose}()},
 \code{\link{scorch_dropout}()},
 \code{\link{scorch_flatten}()},
 \code{\link{scorch_function}()},
+\code{\link{scorch_graph_data}()},
 \code{\link{scorch_input}()},
 \code{\link{scorch_layer}()},
 \code{\link{scorch_output}()},
 \code{\link{scorch_pool}()},
-\code{\link{scorch_transformer_encoder}()}
+\code{\link{scorch_spec}()},
+\code{\link{scorch_transformer_encoder}()},
+\code{\link{validate_scorch_graph}()}
 }
 \concept{model construction}

@@ -67,40 +67,45 @@
 
 scorch_function <- function(scorch_model,
                             name,
-                            func,
+                            func = NULL,
                             inputs = NULL,
+                            .name = NULL,
+                            .from = NULL,
                             ...) {
 
-  #- Resolve inputs when not specified explicitly.
+  scorch_model <- scorch_check_model(scorch_model)
 
-  if (is.null(inputs)) {
+  name_expr <- if (missing(.name)) NULL else substitute(.name)
+  from_expr <- if (missing(.from)) NULL else substitute(.from)
+  inputs_expr <- if (missing(inputs)) NULL else substitute(inputs)
 
-    if (nrow(scorch_model$graph) == 0) {
-
-      if (length(scorch_model$inputs) == 0) {
-
-        stop("No inputs declared. Add at least one with scorch_input().",
-             call. = FALSE)
-
-      } else if (length(scorch_model$inputs) > 1) {
-
-        stop("Must specify 'inputs' when multiple inputs exist.",
-             call. = FALSE)
-      }
-
-      inputs <- scorch_model$inputs
-
-    } else {
-
-      inputs <- utils::tail(scorch_model$graph$name, 1)
-    }
+  if (missing(func) || is.null(func)) {
+    func <- name
+    legacy_name_expr <- NULL
+  } else {
+    legacy_name_expr <- substitute(name)
   }
 
-  #- Validate name before building the module.
+  if (!is.function(func)) {
+    stop("`func` must be a function.", call. = FALSE)
+  }
 
-  if (name %in% scorch_model$graph$name || name %in% scorch_model$inputs)
-    stop("Node name '", name, "' already exists in the model graph.",
-         call. = FALSE)
+  inputs <- scorch_resolve_inputs(
+    scorch_model,
+    inputs = if (is.null(inputs_expr)) NULL else
+      scorch_parse_refs_expr(inputs_expr, arg = "inputs"),
+    from = if (is.null(from_expr)) NULL else
+      scorch_parse_refs_expr(from_expr, arg = ".from")
+  )
+
+  node_name <- scorch_prepare_node_name(
+    scorch_model,
+    explicit_expr = name_expr,
+    legacy_expr = legacy_name_expr,
+    auto_prefix = "function"
+  )
+  scorch_model <- node_name$model
+  name <- node_name$name
 
   #- Capture extra arguments to bake into the forward pass.
 
@@ -120,15 +125,16 @@ scorch_function <- function(scorch_model,
 
   #- Append to graph.
 
-  scorch_model$graph <- tibble::add_row(
-
-    scorch_model$graph,
-    name    = name,
-    module  = list(func_mod),
-    inputs  = list(inputs)
+  scorch_add_graph_node(
+    scorch_model,
+    name = name,
+    module = func_mod,
+    inputs = inputs,
+    node_type = "function",
+    constructor = "function",
+    args = extra_args,
+    explicit_name = node_name$explicit
   )
-
-  scorch_model
 }
 
 #=== END =======================================================================

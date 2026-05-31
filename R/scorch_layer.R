@@ -26,9 +26,11 @@
 #'
 #' @param layer_fn The layer to add. Can be specified in three ways:
 #'   \enumerate{
-#'     \item A string: \code{"linear"}, \code{"conv2d"}, \code{"relu"}.
+#'     \item A string: \code{"linear"}, \code{"conv2d"}, \code{"relu"},
+#'       \code{"multihead_attention"}.
 #'       The \code{nn_} prefix is added automatically if missing.
-#'     \item An unquoted name: \code{linear}, \code{conv2d}.
+#'     \item An unquoted name: \code{linear}, \code{conv2d},
+#'       \code{multihead_attention}.
 #'       Resolved the same way as a string.
 #'     \item A function: \code{torch::nn_linear}, or any \code{nn_module}
 #'       constructor. Used as-is.
@@ -43,7 +45,9 @@
 #'
 #' @param ... Additional arguments passed to the \code{layer_fn}
 #'   constructor (e.g., \code{in_features}, \code{out_features},
-#'   \code{kernel_size}, \code{p}).
+#'   \code{kernel_size}, \code{p}). For \code{multihead_attention},
+#'   forward-pass options such as \code{attn_mask} and \code{causal}
+#'   are also accepted.
 #'
 #' @returns The updated \code{scorch_model} with a new row appended to
 #'   its \code{graph} tibble.
@@ -58,25 +62,37 @@
 #' For residual / skip connections, use \code{\link{scorch_add_skip}}
 #' instead of the old \code{use_residual} argument.
 #'
+#' For \code{multihead_attention}, provide query, key, and value node
+#' references with \code{.from = c(query, key, value)}. The attention
+#' node returns the attention output tensor. Set \code{causal = TRUE}
+#' to apply an upper-triangular attention mask for autoregressive
+#' transformer blocks.
+#'
 #' @examples
 #' \dontrun{
-#' # String (most common)
+#' # Unquoted layer type with automatic naming
 #' model <- model |>
-#'   scorch_layer("fc1", "linear", in_features = 10, out_features = 32)
+#'   scorch_layer(linear, in_features = 10, out_features = 32)
 #'
-#' # Unquoted symbol
+#' # Activation with automatic naming
 #' model <- model |>
-#'   scorch_layer("act1", relu)
+#'   scorch_layer(relu)
 #'
 #' # Direct nn_module constructor
 #' model <- model |>
-#'   scorch_layer("fc2", torch::nn_linear,
-#'                in_features = 32, out_features = 1)
+#'   scorch_layer(torch::nn_linear, in_features = 32, out_features = 1)
 #'
 #' # Explicit input wiring (for multi-input models)
 #' model <- model |>
-#'   scorch_layer("branch_a", "linear", inputs = "stream_a",
+#'   scorch_layer(linear, .from = stream_a,
 #'                in_features = 10, out_features = 16)
+#'
+#' # Multi-head self-attention
+#' model <- model |>
+#'   scorch_layer(multihead_attention,
+#'                embed_dim = 64, num_heads = 4, causal = TRUE,
+#'                .from = c(embeddings, embeddings, embeddings),
+#'                .name = attention)
 #' }
 #'
 #' @family model construction
@@ -85,101 +101,74 @@
 
 scorch_layer <- function(scorch_model,
                          name,
-                         layer_fn,
+                         layer_fn = NULL,
                          inputs = NULL,
+                         .name = NULL,
+                         .from = NULL,
                          ...) {
 
-  #- Capture the raw call to distinguish strings, symbols, and functions.
+  scorch_model <- scorch_check_model(scorch_model)
 
-  mc <- match.call()
+  name_expr <- if (missing(.name)) NULL else substitute(.name)
+  from_expr <- if (missing(.from)) NULL else substitute(.from)
+  inputs_expr <- if (missing(inputs)) NULL else substitute(inputs)
 
-  fn_expr <- mc$layer_fn
-
-  if (is.symbol(fn_expr) || is.character(layer_fn)) {
-
-    #- Either an unquoted name (symbol) or a string.
-
-    fn_name <- if (is.symbol(fn_expr)) as.character(fn_expr) else layer_fn
-
-    #- Auto-prepend nn_ if not already present.
-
-    if (!grepl("^nn_", fn_name)) fn_name <- paste0("nn_", fn_name)
-
-    #- Check that the function exists in torch.
-
-    if (!exists(fn_name, envir = asNamespace("torch"), mode = "function")) {
-
-      stop("No torch layer called '", fn_name, "'.", call. = FALSE)
-    }
-
-    layer_fn <- get(fn_name, envir = asNamespace("torch"))
-
-  } else if (is.function(layer_fn)) {
-
-    #- User passed a constructor directly -- keep it.
-    NULL
-
+  if (missing(layer_fn) || is.null(layer_fn)) {
+    layer_expr <- substitute(name)
+    legacy_name_expr <- NULL
+    layer_value <- tryCatch(eval(layer_expr, parent.frame()),
+                            error = function(e) layer_expr)
   } else {
-
-    stop("`layer_fn` must be a torch layer name or function.", call. = FALSE)
+    legacy_name_expr <- substitute(name)
+    layer_expr <- substitute(layer_fn)
+    layer_value <- tryCatch(eval(layer_expr, parent.frame()),
+                            error = function(e) layer_expr)
   }
 
-  #- Resolve inputs when not specified explicitly.
+  constructor <- scorch_constructor_name(layer_expr, fallback = "layer")
+  layer_fn <- scorch_resolve_layer_fn(layer_value, layer_expr)
+  inputs <- scorch_resolve_inputs(
+    scorch_model,
+    inputs = if (is.null(inputs_expr)) NULL else
+      scorch_parse_refs_expr(inputs_expr, arg = "inputs"),
+    from = if (is.null(from_expr)) NULL else
+      scorch_parse_refs_expr(from_expr, arg = ".from")
+  )
 
-  if (is.null(inputs)) {
-
-    if (nrow(scorch_model$graph) == 0) {
-
-      #- Graph is empty: must have exactly one declared input.
-
-      if (length(scorch_model$inputs) == 0) {
-
-        stop("No inputs declared. Add at least one with scorch_input().",
-             call. = FALSE)
-
-      } else if (length(scorch_model$inputs) > 1) {
-
-        stop("Must specify 'inputs' when multiple inputs exist.",
-             call. = FALSE)
-      }
-
-      inputs <- scorch_model$inputs
-
-    } else {
-
-      #- Default to the last node in the graph.
-
-      inputs <- utils::tail(scorch_model$graph$name, 1)
-    }
-  }
-
-  #- Validate inputs and name before building the module.
-
-  all_names <- c(scorch_model$inputs, scorch_model$graph$name)
-  bad_inputs <- setdiff(inputs, all_names)
-  if (length(bad_inputs) > 0)
-    stop("Input node(s) not found in model: ",
-         paste(bad_inputs, collapse = ", "), call. = FALSE)
-
-  if (name %in% scorch_model$graph$name || name %in% scorch_model$inputs)
-    stop("Node name '", name, "' already exists in the model graph.",
-         call. = FALSE)
+  node_name <- scorch_prepare_node_name(
+    scorch_model,
+    explicit_expr = name_expr,
+    legacy_expr = legacy_name_expr,
+    auto_prefix = constructor
+  )
+  scorch_model <- node_name$model
+  name <- node_name$name
 
   #- Instantiate the module.
 
-  module <- do.call(layer_fn, list(...))
+  args <- list(...)
+  layer_args <- scorch_split_layer_args(args, constructor)
+  module <- do.call(layer_fn, layer_args$constructor)
+  module <- scorch_finalize_layer_module(
+    module,
+    constructor,
+    forward_args = layer_args$forward,
+    causal = layer_args$causal,
+    batch_first = layer_args$batch_first
+  )
 
   #- Append to graph.
 
-  scorch_model$graph <- tibble::add_row(
-
-    scorch_model$graph,
-    name    = name,
-    module  = list(module),
-    inputs  = list(inputs)
+  scorch_add_graph_node(
+    scorch_model,
+    name = name,
+    module = module,
+    inputs = inputs,
+    node_type = "layer",
+    constructor = constructor,
+    args = args,
+    explicit_name = node_name$explicit
   )
-
-  scorch_model
 }
 
 #=== END =======================================================================

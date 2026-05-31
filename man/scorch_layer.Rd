@@ -4,7 +4,15 @@
 \alias{scorch_layer}
 \title{Add a Layer Node to a Scorch Model}
 \usage{
-scorch_layer(scorch_model, name, layer_fn, inputs = NULL, ...)
+scorch_layer(
+  scorch_model,
+  name,
+  layer_fn = NULL,
+  inputs = NULL,
+  .name = NULL,
+  .from = NULL,
+  ...
+)
 }
 \arguments{
 \item{scorch_model}{A \code{scorch_model} object created by
@@ -21,9 +29,11 @@ for multiples (e.g., \code{"fc1"}, \code{"fc2"}).}
 
 \item{layer_fn}{The layer to add. Can be specified in three ways:
 \enumerate{
-\item A string: \code{"linear"}, \code{"conv2d"}, \code{"relu"}.
+\item A string: \code{"linear"}, \code{"conv2d"}, \code{"relu"},
+\code{"multihead_attention"}.
 The \code{nn_} prefix is added automatically if missing.
-\item An unquoted name: \code{linear}, \code{conv2d}.
+\item An unquoted name: \code{linear}, \code{conv2d},
+\code{multihead_attention}.
 Resolved the same way as a string.
 \item A function: \code{torch::nn_linear}, or any \code{nn_module}
 constructor. Used as-is.
@@ -38,7 +48,9 @@ the graph is empty.}
 
 \item{...}{Additional arguments passed to the \code{layer_fn}
 constructor (e.g., \code{in_features}, \code{out_features},
-\code{kernel_size}, \code{p}).}
+\code{kernel_size}, \code{p}). For \code{multihead_attention},
+forward-pass options such as \code{attn_mask} and \code{causal}
+are also accepted.}
 }
 \value{
 The updated \code{scorch_model} with a new row appended to
@@ -59,31 +71,44 @@ build the forward pass.
 
 For residual / skip connections, use \code{\link{scorch_add_skip}}
 instead of the old \code{use_residual} argument.
+
+For \code{multihead_attention}, provide query, key, and value node
+references with \code{.from = c(query, key, value)}. The attention
+node returns the attention output tensor. Set \code{causal = TRUE}
+to apply an upper-triangular attention mask for autoregressive
+transformer blocks.
 }
 \examples{
 \dontrun{
-# String (most common)
+# Unquoted layer type with automatic naming
 model <- model |>
-  scorch_layer("fc1", "linear", in_features = 10, out_features = 32)
+  scorch_layer(linear, in_features = 10, out_features = 32)
 
-# Unquoted symbol
+# Activation with automatic naming
 model <- model |>
-  scorch_layer("act1", relu)
+  scorch_layer(relu)
 
 # Direct nn_module constructor
 model <- model |>
-  scorch_layer("fc2", torch::nn_linear,
-               in_features = 32, out_features = 1)
+  scorch_layer(torch::nn_linear, in_features = 32, out_features = 1)
 
 # Explicit input wiring (for multi-input models)
 model <- model |>
-  scorch_layer("branch_a", "linear", inputs = "stream_a",
+  scorch_layer(linear, .from = stream_a,
                in_features = 10, out_features = 16)
+
+# Multi-head self-attention
+model <- model |>
+  scorch_layer(multihead_attention,
+               embed_dim = 64, num_heads = 4, causal = TRUE,
+               .from = c(embeddings, embeddings, embeddings),
+               .name = attention)
 }
 
 }
 \seealso{
 Other model construction: 
+\code{\link{as_torch_module}()},
 \code{\link{compile_scorch}()},
 \code{\link{initiate_scorch}()},
 \code{\link{plot_scorch_model}()},
@@ -91,14 +116,18 @@ Other model construction:
 \code{\link{scorch_add_skip}()},
 \code{\link{scorch_attention}()},
 \code{\link{scorch_batchnorm}()},
+\code{\link{scorch_block}()},
 \code{\link{scorch_concat}()},
 \code{\link{scorch_conv_transpose}()},
 \code{\link{scorch_dropout}()},
 \code{\link{scorch_flatten}()},
 \code{\link{scorch_function}()},
+\code{\link{scorch_graph_data}()},
 \code{\link{scorch_input}()},
 \code{\link{scorch_output}()},
 \code{\link{scorch_pool}()},
-\code{\link{scorch_transformer_encoder}()}
+\code{\link{scorch_spec}()},
+\code{\link{scorch_transformer_encoder}()},
+\code{\link{validate_scorch_graph}()}
 }
 \concept{model construction}

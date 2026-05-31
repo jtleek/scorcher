@@ -10,6 +10,8 @@ scorch_pool(
   inputs = NULL,
   method = "max",
   type = "2d",
+  .name = NULL,
+  .from = NULL,
   ...
 )
 }
@@ -59,9 +61,9 @@ For standard pooling (\code{"max"}, \code{"avg"}), the
 \dontrun{
 # Max pooling after conv2d
 model <- model |>
-  scorch_layer("conv1", "conv2d", in_channels = 3, out_channels = 16,
+  scorch_layer(conv2d, in_channels = 3, out_channels = 16,
                kernel_size = 3) |>
-  scorch_pool("pool1", kernel_size = 2)
+  scorch_pool(kernel_size = 2)
 
 # Adaptive average pooling to fixed output size
 model <- model |>
@@ -75,6 +77,7 @@ model <- model |>
 }
 \seealso{
 Other model construction: 
+\code{\link{as_torch_module}()},
 \code{\link{compile_scorch}()},
 \code{\link{initiate_scorch}()},
 \code{\link{plot_scorch_model}()},
@@ -82,14 +85,18 @@ Other model construction:
 \code{\link{scorch_add_skip}()},
 \code{\link{scorch_attention}()},
 \code{\link{scorch_batchnorm}()},
+\code{\link{scorch_block}()},
 \code{\link{scorch_concat}()},
 \code{\link{scorch_conv_transpose}()},
 \code{\link{scorch_dropout}()},
 \code{\link{scorch_flatten}()},
 \code{\link{scorch_function}()},
+\code{\link{scorch_graph_data}()},
 \code{\link{scorch_input}()},
 \code{\link{scorch_layer}()},
 \code{\link{scorch_output}()},
-\code{\link{scorch_transformer_encoder}()}
+\code{\link{scorch_spec}()},
+\code{\link{scorch_transformer_encoder}()},
+\code{\link{validate_scorch_graph}()}
 }
 \concept{model construction}

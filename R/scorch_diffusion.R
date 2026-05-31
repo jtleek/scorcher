@@ -265,15 +265,24 @@ scorch_2d_diffusion_forward <- function(model, input, timesteps) {
 
 scorch_2d_diffusion_train <- function(batch, noise_scheduler, ...) {
 
-  noise <- torch_randn(batch$input$shape)
+  input <- if (inherits(batch$input, "torch_tensor")) {
+    batch$input
+  } else {
+    batch$input[[1]]
+  }
+
+  noise <- torch_randn(input$shape)
 
   timesteps <- torch_randint(0, noise_scheduler$num_timesteps,
 
-    list(batch$input$shape[1]), dtype = torch_long())
+    list(input$shape[1]), dtype = torch_long())
 
-  noisy <- noise_scheduler$add_noise(batch$input, noise, timesteps)
+  noisy <- noise_scheduler$add_noise(input, noise, timesteps)
 
-  list(input = noisy, output = noise, timesteps = timesteps)
+  list(
+    input = list(input = noisy, timesteps = timesteps),
+    output = noise
+  )
 }
 
 #=== END =======================================================================

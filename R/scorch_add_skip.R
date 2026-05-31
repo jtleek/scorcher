@@ -40,10 +40,11 @@
 #' \dontrun{
 #' # Residual connection around a linear + relu block
 #' model <- model |>
-#'   scorch_layer("fc1", "linear", inputs = "x",
-#'                in_features = 32, out_features = 32) |>
-#'   scorch_layer("act1", "relu") |>
-#'   scorch_add_skip("res1", inputs = c("act1", "x"))
+#'   scorch_layer(linear, .from = x,
+#'                in_features = 32, out_features = 32,
+#'                .name = update) |>
+#'   scorch_layer(relu, .name = activated) |>
+#'   scorch_add_skip(.from = c(activated, x), .name = residual)
 #' }
 #'
 #' @family model construction
@@ -52,24 +53,39 @@
 
 scorch_add_skip <- function(scorch_model,
                             name,
-                            inputs) {
+                            inputs = NULL,
+                            .name = NULL,
+                            .from = NULL) {
+
+  scorch_model <- scorch_check_model(scorch_model)
+
+  name_expr <- if (missing(.name)) NULL else substitute(.name)
+  legacy_name_expr <- if (missing(name)) NULL else substitute(name)
+  from_expr <- if (missing(.from)) NULL else substitute(.from)
+  inputs_expr <- if (missing(inputs)) NULL else substitute(inputs)
+
+  inputs <- scorch_resolve_inputs(
+    scorch_model,
+    inputs = if (is.null(inputs_expr)) NULL else
+      scorch_parse_refs_expr(inputs_expr, arg = "inputs"),
+    from = if (is.null(from_expr)) NULL else
+      scorch_parse_refs_expr(from_expr, arg = ".from"),
+    allow_multi = TRUE
+  )
 
   if (length(inputs) != 2) {
 
-    stop("`inputs` must be length 2.", call. = FALSE)
+    stop("Skip connections require exactly two input nodes.", call. = FALSE)
   }
 
-  #- Validate inputs and name before building the module.
-
-  all_names <- c(scorch_model$inputs, scorch_model$graph$name)
-  bad_inputs <- setdiff(inputs, all_names)
-  if (length(bad_inputs) > 0)
-    stop("Input node(s) not found in model: ",
-         paste(bad_inputs, collapse = ", "), call. = FALSE)
-
-  if (name %in% scorch_model$graph$name || name %in% scorch_model$inputs)
-    stop("Node name '", name, "' already exists in the model graph.",
-         call. = FALSE)
+  node_name <- scorch_prepare_node_name(
+    scorch_model,
+    explicit_expr = name_expr,
+    legacy_expr = legacy_name_expr,
+    auto_prefix = "skip"
+  )
+  scorch_model <- node_name$model
+  name <- node_name$name
 
   #- Build a lightweight module that sums its two inputs.
 
@@ -85,15 +101,16 @@ scorch_add_skip <- function(scorch_model,
 
   #- Append to graph.
 
-  scorch_model$graph <- tibble::add_row(
-
-    scorch_model$graph,
-    name   = name,
-    module = list(skip_mod),
-    inputs = list(inputs)
+  scorch_add_graph_node(
+    scorch_model,
+    name = name,
+    module = skip_mod,
+    inputs = inputs,
+    node_type = "function",
+    constructor = "add_skip",
+    args = list(),
+    explicit_name = node_name$explicit
   )
-
-  scorch_model
 }
 
 #=== END =======================================================================

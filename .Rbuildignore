@@ -3,3 +3,7 @@
 ^vignettes/articles$
 ^LICENSE\.md$
 ^README\.Rmd$
+^\.github$
+^_pkgdown\.yml$
+^\.positai$
+^\.claude$

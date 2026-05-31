@@ -314,11 +314,7 @@ scorch_save <- function(scorch_model,
 
   graph_as_list <- if (!is.null(scorch_model$graph)) {
 
-    list(
-      name    = scorch_model$graph$name,     # Character vector of node names
-      module  = scorch_model$graph$module,   # List of nn_module objects
-      inputs  = scorch_model$graph$inputs    # List of character vectors (DAG edges)
-    )
+    as.list(scorch_ensure_graph_schema(scorch_model$graph))
 
   } else {
 

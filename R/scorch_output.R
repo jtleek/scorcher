@@ -35,18 +35,32 @@
 #' \dontrun{
 #' # Single output
 #' model <- model |>
-#'   scorch_output("fc_out")
+#'   scorch_output(fc_out)
 #'
 #' # Multi-output (e.g., regression head + classification head)
 #' model <- model |>
-#'   scorch_output(c("reg_head", "cls_head"))
+#'   scorch_output(c(reg_head, cls_head))
 #' }
 #'
 #' @family model construction
 #'
 #' @export
 
-scorch_output <- function(scorch_model, outputs) {
+scorch_output <- function(scorch_model, outputs = NULL) {
+
+  scorch_model <- scorch_check_model(scorch_model)
+
+  outputs_expr <- if (missing(outputs)) NULL else substitute(outputs)
+
+  if (is.null(outputs_expr) || identical(outputs_expr, quote(NULL))) {
+    if (nrow(scorch_model$graph) == 0) {
+      stop("No graph nodes are available to mark as output.", call. = FALSE)
+    }
+    outputs <- utils::tail(scorch_model$graph$name, 1)
+  } else {
+    outputs <- scorch_parse_refs_expr(outputs_expr, arg = "outputs",
+                                      allow_null = FALSE)
+  }
 
   #- Validate: outputs must be a character vector.
 

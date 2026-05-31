@@ -14,6 +14,9 @@
 #'
 #' @param size The dimension of the embedding.
 #'
+#' @param emb_size Optional alias for \code{size}. This is accepted for
+#' diffusion examples that mirror tiny-diffusion naming.
+#'
 #' @param scale A scaling factor applied to the input before creating the
 #' embedding. Default is 1.0.
 #'
@@ -234,7 +237,13 @@ ZeroEmbedding <- nn_module(
 
 PositionalEmbedding <- nn_module(
 
-  initialize = function(size, type, ...) {
+  initialize = function(size = NULL, type = "sinusoidal", ...,
+                        emb_size = NULL) {
+
+    size <- size %||% emb_size
+    if (is.null(size)) {
+      stop("`size` is required for PositionalEmbedding.", call. = FALSE)
+    }
 
     if (type == "sinusoidal") {
 

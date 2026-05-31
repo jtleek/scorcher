@@ -77,7 +77,11 @@ fit_scorch <- function(scorch_model,
                        preprocess_fn = NULL,
                        clip_grad     = NULL,
                        clip_params   = list(),
+                       device        = "auto",
+                       seed          = NULL,
                        ...) {
+
+  scorch_model <- scorch_check_model(scorch_model)
 
   #- Validate that the model has been compiled.
 
@@ -89,26 +93,59 @@ fit_scorch <- function(scorch_model,
     stop("No dataloader attached. Use initiate_scorch(dl = ...) to attach one.",
          call. = FALSE)
 
-  #- Detect device.
-
-  device <- if (torch::cuda_is_available()) {
-
-    message("CUDA available. Training on GPU.")
-
-    torch::torch_device("cuda")
-
-  } else {
-
-    message("No GPU detected. Training on CPU.")
-
-    torch::torch_device("cpu")
+  if (!is.null(seed)) {
+    set.seed(seed)
+    torch::torch_manual_seed(seed)
   }
 
-  scorch_model$nn_model <- scorch_model$nn_model$to(device = device)
+  #- Detect or validate device.
+
+  device_name <- if (identical(device, "auto")) {
+    if (torch::cuda_is_available()) "cuda" else "cpu"
+  } else {
+    as.character(device)
+  }
+
+  if (device_name == "cuda" && !torch::cuda_is_available()) {
+    stop("CUDA was requested but is not available.", call. = FALSE)
+  }
+
+  if (verbose) {
+    if (device_name == "cuda") {
+      message("CUDA available. Training on GPU.")
+    } else {
+      message("Training on CPU.")
+    }
+  }
+
+  torch_device <- torch::torch_device(device_name)
+
+  scorch_model$nn_model <- scorch_model$nn_model$to(device = torch_device)
+
+  normalize_batch <- function(batch) {
+    if (!is.null(preprocess_fn)) {
+      p <- preprocess_fn(batch, ...)
+      if (!is.list(p) || is.null(p$input) || is.null(p$output)) {
+        stop("`preprocess_fn` must return list(input = ..., output = ...).",
+             call. = FALSE)
+      }
+      p
+    } else {
+      batch
+    }
+  }
+
+  move_inputs <- function(x) {
+    scorch_move_tensor_list(x, device = torch_device, default_name = "input")
+  }
+
+  move_outputs <- function(x) {
+    scorch_move_tensor_list(x, device = torch_device, default_name = "output")
+  }
 
   #- Recreate optimizer so it references the on-device parameters.
   #- After $to(device), the old optimizer still points to stale CPU tensors.
-  #- For loaded models (via scorch_load), optimizer_fn may be NULL — fall back
+  #- For loaded models (via scorch_load), optimizer_fn may be NULL - fall back
   #- to reusing the existing optimizer directly.
 
   if (!is.null(scorch_model$optimizer_fn)) {
@@ -121,6 +158,7 @@ fit_scorch <- function(scorch_model,
 
     optimizer <- scorch_model$optimizer
   }
+
 
   #- Determine if there are multiple loss functions.
 
@@ -136,6 +174,8 @@ fit_scorch <- function(scorch_model,
 
   n_batches <- length(scorch_model$dl)
 
+  history <- vector("list", num_epochs)
+
   #- Training loop.
 
   for (epoch in seq_len(num_epochs)) {
@@ -146,37 +186,21 @@ fit_scorch <- function(scorch_model,
 
       #- Prepare inputs and targets.
 
-      if (!is.null(preprocess_fn)) {
-
-        p       <- preprocess_fn(batch, ...)
-
-        inputs  <- lapply(p$input, function(x) x$to(device = device))
-
-        tars    <- p$output
-
-      } else {
-
-        inputs <- lapply(batch$input, function(x) x$to(device = device))
-
-        tars <- batch$output
-      }
+      p <- normalize_batch(batch)
+      inputs <- move_inputs(p$input)
+      tars <- p$output
 
       #- Move targets to device.
 
+      targets <- move_outputs(tars)
+
       if (n_out == 1) {
 
-        if (is.list(tars)) {
-
-          tar_list <- list(tars[[1]]$to(device = device))
-
-        } else {
-
-          tar_list <- list(tars$to(device = device))
-        }
+        tar_list <- list(targets[[1]])
 
       } else {
 
-        tar_list <- lapply(tars, function(x) x$to(device = device))
+        tar_list <- targets
       }
 
       #- Forward pass.
@@ -203,7 +227,7 @@ fit_scorch <- function(scorch_model,
         #- Named list of losses: sum across all outputs.
 
         loss <- torch::torch_tensor(0, dtype = torch::torch_float(),
-                                    device = device)
+                                    device = torch_device)
 
         for (i in seq_along(outputs)) {
 
@@ -251,11 +275,27 @@ fit_scorch <- function(scorch_model,
       message(sprintf("Epoch %2d/%2d -- avg loss: %.4f",
                       epoch, num_epochs, avg_loss))
     }
+
+    history[[epoch]] <- data.frame(
+      epoch = epoch,
+      loss = total_loss / n_batches,
+      backend = "torch",
+      device = device_name,
+      stringsAsFactors = FALSE
+    )
   }
 
   #- Write the trained optimizer back so scorch_save captures its state.
 
   scorch_model$optimizer <- optimizer
+  scorch_model$history <- do.call(rbind, history)
+  scorch_model$metadata$training <- list(
+    backend = "torch",
+    device = device_name,
+    seed = seed,
+    epochs = num_epochs,
+    timestamp = format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z")
+  )
 
   scorch_model
 }
