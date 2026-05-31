@@ -21,8 +21,11 @@ A \code{torch::nn_module} generator, or an instantiated module when
 Convert a Scorch Model to a Torch Module Generator
 }
 \seealso{
-Other model training:
+Other model training: 
+\code{\link{as_luz_module}()},
 \code{\link{fit_scorch}()},
-\code{\link{as_luz_module}()}
+\code{\link{scorch_evaluate}()},
+\code{\link{scorch_evaluate_predictions}()},
+\code{\link{scorch_predict}()}
 }
 \concept{model training}

@@ -42,6 +42,11 @@ network (default 2048).}
 
 \item{dropout}{Numeric. Dropout rate (default 0.1).}
 
+\item{.name}{Optional node name. Can be a string or an unquoted name.}
+
+\item{.from}{Optional upstream node reference. Can be a string or an
+unquoted name.}
+
 \item{...}{Additional arguments passed to
 \code{torch::nn_transformer_encoder_layer()}.}
 }

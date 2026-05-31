@@ -26,6 +26,11 @@
 #' @param inputs Character vector of upstream node names. If \code{NULL}
 #'   (default), resolved automatically (last node or sole input).
 #'
+#' @param .name Optional node name. Can be a string or an unquoted name.
+#'
+#' @param .from Optional upstream node reference. Can be a string or an
+#'   unquoted name.
+#'
 #' @param num_features Integer. Number of features (the C dimension).
 #'
 #' @param type Character. Which batch norm variant to use:

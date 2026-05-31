@@ -1,8 +1,14 @@
 Package: scorcher
 Title: Declarative, Reproducible Workflows for Torch Models
 Version: 0.0.0.9000
-Authors@R: 
-    person("Scorcher", "authors", role = c("aut", "cre"))
+Authors@R: c(
+      person(given = "Stephen", family = "Salerno",
+        email = "salerno.s@wustl.edu", role = c("aut"),
+        comment = c(ORCID = "0000-0003-2763-0494")),
+      person(given = "Awan", family = "Afiaz",
+        email = "aafiaz@uw.edu", role = c("aut")),
+      person(given = "Jeffrey T", family = "Leek",
+        email = "jtleek@fredhutch.org", role = c("aut", "cre", "cph")))
 Description: Build, inspect, train, visualize, and snapshot graph-based
     torch models from R. Scorcher provides a pipeable model graph workflow
     with deterministic node naming, reusable architecture blocks, and
@@ -19,7 +25,6 @@ Imports:
     dplyr,
     ggplot2,
     purrr,
-    rlang,
     tibble,
     tools,
     torch,

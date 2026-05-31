@@ -9,13 +9,13 @@ PositionalEmbedding(size = NULL, type = "sinusoidal", ..., emb_size = NULL)
 \arguments{
 \item{size}{The dimension of the embedding.}
 
-\item{emb_size}{Optional alias for \code{size}. This is accepted for diffusion
-examples that mirror tiny-diffusion naming.}
-
 \item{type}{The type of embedding to use, such as "sinusoidal", "linear",
 "learnable", "zero", or "identity".}
 
 \item{...}{Additional parameters specific to the chosen embedding type.}
+
+\item{emb_size}{Optional alias for \code{size}. This is accepted for
+diffusion examples that mirror tiny-diffusion naming.}
 }
 \value{
 A \code{PositionalEmbedding} object.

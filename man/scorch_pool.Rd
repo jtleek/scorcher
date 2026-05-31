@@ -38,6 +38,11 @@ or \code{"adaptive_avg"}.}
 \item{type}{Character. Dimensionality variant:
 \code{"1d"}, \code{"2d"} (default), or \code{"3d"}.}
 
+\item{.name}{Optional node name. Can be a string or an unquoted name.}
+
+\item{.from}{Optional upstream node reference. Can be a string or an
+unquoted name.}
+
 \item{...}{Additional arguments passed to the underlying
 \code{torch::nn_*_pool*} function (e.g., \code{kernel_size},
 \code{stride}, \code{output_size}).}

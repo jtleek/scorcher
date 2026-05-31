@@ -22,6 +22,11 @@ for multiples (e.g., \code{"fc1"}, \code{"fc2"}).}
 \item{inputs}{A length-2 character vector: \code{c("main_path",
   "skip_path")}. Both upstream nodes must produce tensors of the
 same shape.}
+
+\item{.name}{Optional node name. Can be a string or an unquoted name.}
+
+\item{.from}{Optional length-2 upstream node references. Can be a character
+vector, unquoted names, or \code{c(...)} of unquoted names.}
 }
 \value{
 The updated \code{scorch_model} with a new row appended to

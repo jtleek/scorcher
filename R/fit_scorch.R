@@ -31,6 +31,13 @@
 #'   \code{"norm"}: \code{list(max_norm = 1.0)}. For \code{"value"}:
 #'   \code{list(clip_value = 0.5)}.
 #'
+#' @param device Character. Device to train on. Use \code{"auto"} to select
+#'   CUDA when available and CPU otherwise, or specify \code{"cpu"} or
+#'   \code{"cuda"}.
+#'
+#' @param seed Optional integer seed used to make the training run more
+#'   reproducible.
+#'
 #' @param ... Additional arguments passed to \code{preprocess_fn}.
 #'
 #' @returns The trained \code{scorch_model} with its \code{nn_model}

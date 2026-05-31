@@ -17,8 +17,10 @@ Convert a Scorch Model to a Luz-Compatible Module
 }
 \seealso{
 Other model training: 
-\code{\link{fit_scorch}()},
 \code{\link{as_torch}()},
-\code{\link{fit_scorch}()}
+\code{\link{fit_scorch}()},
+\code{\link{scorch_evaluate}()},
+\code{\link{scorch_evaluate_predictions}()},
+\code{\link{scorch_predict}()}
 }
 \concept{model training}

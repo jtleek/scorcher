@@ -35,6 +35,11 @@ preserving the batch dimension).}
 
 \item{end_dim}{Integer. Last dimension to flatten (default -1,
 meaning the last dimension).}
+
+\item{.name}{Optional node name. Can be a string or an unquoted name.}
+
+\item{.from}{Optional upstream node reference. Can be a string or an
+unquoted name.}
 }
 \value{
 The updated \code{scorch_model} with a new row appended to

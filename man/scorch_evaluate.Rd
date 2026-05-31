@@ -23,7 +23,8 @@ A one-row tibble with the metric value.
 Evaluate a Scorch Model
 }
 \seealso{
-Other model training:
+Other model training: 
+\code{\link{as_luz_module}()},
 \code{\link{as_torch}()},
 \code{\link{fit_scorch}()},
 \code{\link{scorch_evaluate_predictions}()},

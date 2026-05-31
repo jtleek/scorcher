@@ -13,7 +13,8 @@ knitr::opts_chunk$set(
   error = FALSE,
   warning = FALSE,
   message = FALSE,
-  comment = "#>"
+  comment = "#>",
+  eval = FALSE
 )
 ```
 

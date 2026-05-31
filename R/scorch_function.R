@@ -31,6 +31,11 @@
 #' @param inputs Character vector of upstream node names. If \code{NULL}
 #'   (default), resolved automatically (last node or sole input).
 #'
+#' @param .name Optional node name. Can be a string or an unquoted name.
+#'
+#' @param .from Optional upstream node reference or references. Can be a
+#'   string, an unquoted name, or \code{c(...)} of unquoted names.
+#'
 #' @param ... Additional arguments passed to \code{func} at forward
 #'   time. These are captured at model-build time and baked into the
 #'   node.

@@ -42,6 +42,11 @@ for multiples (e.g., \code{"fc1"}, \code{"fc2"}).}
 \item{type}{Character. Dimensionality variant:
 \code{"1d"}, \code{"2d"} (default), or \code{"3d"}.}
 
+\item{.name}{Optional node name. Can be a string or an unquoted name.}
+
+\item{.from}{Optional upstream node reference. Can be a string or an
+unquoted name.}
+
 \item{...}{Additional arguments passed to the underlying
 \code{torch::nn_conv_transpose*} function (e.g., \code{stride},
 \code{padding}, \code{output_padding}).}

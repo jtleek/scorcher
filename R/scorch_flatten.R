@@ -26,6 +26,11 @@
 #' @param inputs Character vector of upstream node names. If \code{NULL}
 #'   (default), resolved automatically (last node or sole input).
 #'
+#' @param .name Optional node name. Can be a string or an unquoted name.
+#'
+#' @param .from Optional upstream node reference. Can be a string or an
+#'   unquoted name.
+#'
 #' @param start_dim Integer. First dimension to flatten (default 2,
 #'   preserving the batch dimension).
 #'

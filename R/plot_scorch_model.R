@@ -14,8 +14,6 @@
 #'
 #' @param scorch_model A \code{scorch_model} object.
 #'
-#' @param x A \code{scorch_model} object.
-#'
 #' @param detail How much to show in each node. \code{"simple"} shows only the
 #'   layer type. \code{"full"} adds the node name, upstream inputs, parameter
 #'   counts, and dimensions that can be inferred from layer arguments.

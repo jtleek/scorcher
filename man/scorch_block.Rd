@@ -47,8 +47,8 @@ gives the layer name, or a character layer name.}
 \item{repeats}{Number of times to repeat \code{layers}.}
 }
 \value{
-The updated \code{scorch_model}. In graph block mode, the block output node
-is named by \code{.name}.
+The updated \code{scorch_model}. In graph block mode, the block
+output node is named by \code{.name}.
 }
 \description{
 Adds a reusable block to the Scorch model graph. The recommended use is a

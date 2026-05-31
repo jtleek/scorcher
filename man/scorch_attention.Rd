@@ -35,6 +35,11 @@ for multiples (e.g., \code{"fc1"}, \code{"fc2"}).}
 
 \item{num_heads}{Integer. Number of attention heads.}
 
+\item{.name}{Optional node name. Can be a string or an unquoted name.}
+
+\item{.from}{Optional upstream query, key, and value references. Can be a
+character vector, unquoted names, or \code{c(...)} of unquoted names.}
+
 \item{...}{Additional arguments passed to
 \code{torch::nn_multihead_attention()} (e.g., \code{dropout}).}
 }

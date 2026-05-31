@@ -60,15 +60,15 @@ default; R arrays are converted to float unless they are integer outputs.
 }
 \details{
 Type conversion is handled automatically:
-  \describe{
-    \item{Inputs}{Existing torch tensor dtypes are preserved in
-      \code{"auto"} mode. 3-D float tensors (N, H, W) gain a channel
-      dimension (N, 1, H, W). 1-D float tensors (N) become (N, 1).}
-    \item{Outputs}{Integer outputs and long tensors are kept as
-      \code{torch_long()}. Float outputs are kept as \code{torch_float()}.
-      1-D float tensors are unsqueezed to (N, 1). Explicit
-      \code{output_dtype} overrides this behavior.}
-  }
+\describe{
+\item{Inputs}{Existing torch tensor dtypes are preserved in
+\code{"auto"} mode. 3-D float tensors (N, H, W) gain a channel
+dimension (N, 1, H, W). 1-D float tensors (N) become (N, 1).}
+\item{Outputs}{Integer outputs and long tensors are kept as
+\code{torch_long()}. Float outputs are kept as \code{torch_float()}.
+1-D float tensors are unsqueezed to (N, 1). Explicit
+\code{output_dtype} overrides this behavior.}
+}
 
 Bare (non-list) inputs and outputs are wrapped in a single-element
 named list automatically.

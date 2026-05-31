@@ -3,8 +3,16 @@
 
 # scorcher
 
+### <img src="man/figures/scorcher.png" align="right" height="200" style="float:right; height:200px;"/>
+
 <!-- badges: start -->
 
+[![R-CMD-check](https://github.com/jtleek/scorcher/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/jtleek/scorcher/actions/workflows/R-CMD-check.yaml)
+[![Lifecycle:
+experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![License:
+MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-0.0.0.9000-blue.svg)](DESCRIPTION)
 <!-- badges: end -->
 
 `scorcher` provides a high-level, declarative workflow for building R

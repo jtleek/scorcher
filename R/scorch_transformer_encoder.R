@@ -25,6 +25,11 @@
 #'
 #' @param inputs Character vector of a single upstream node name.
 #'
+#' @param .name Optional node name. Can be a string or an unquoted name.
+#'
+#' @param .from Optional upstream node reference. Can be a string or an
+#'   unquoted name.
+#'
 #' @param embed_dim Integer. The d_model dimension (total embedding
 #'   size).
 #'

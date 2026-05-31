@@ -34,6 +34,11 @@ by any additional arguments captured via \code{...}.}
 \item{inputs}{Character vector of upstream node names. If \code{NULL}
 (default), resolved automatically (last node or sole input).}
 
+\item{.name}{Optional node name. Can be a string or an unquoted name.}
+
+\item{.from}{Optional upstream node reference or references. Can be a
+string, an unquoted name, or \code{c(...)} of unquoted names.}
+
 \item{...}{Additional arguments passed to \code{func} at forward
 time. These are captured at model-build time and baked into the
 node.}

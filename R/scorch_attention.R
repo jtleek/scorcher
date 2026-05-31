@@ -26,6 +26,11 @@
 #' @param inputs Character vector of three upstream node names:
 #'   \code{c("query", "key", "value")}.
 #'
+#' @param .name Optional node name. Can be a string or an unquoted name.
+#'
+#' @param .from Optional upstream query, key, and value references. Can be a
+#'   character vector, unquoted names, or \code{c(...)} of unquoted names.
+#'
 #' @param embed_dim Integer. Total embedding dimension.
 #'
 #' @param num_heads Integer. Number of attention heads.

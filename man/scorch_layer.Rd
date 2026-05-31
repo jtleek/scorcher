@@ -46,6 +46,11 @@ is empty, the sole input declared via \code{\link{scorch_input}}.
 Must be specified explicitly when the model has multiple inputs and
 the graph is empty.}
 
+\item{.name}{Optional node name. Can be a string or an unquoted name.}
+
+\item{.from}{Optional upstream node reference or references. Can be a
+string, an unquoted name, or \code{c(...)} of unquoted names.}
+
 \item{...}{Additional arguments passed to the \code{layer_fn}
 constructor (e.g., \code{in_features}, \code{out_features},
 \code{kernel_size}, \code{p}). For \code{multihead_attention},

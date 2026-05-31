@@ -32,6 +32,11 @@ whose outputs will be concatenated.}
 \item{dim}{Integer. Dimension along which to concatenate (default 2,
 the feature dimension). Dim 1 is the batch dimension in R torch
 (1-indexed).}
+
+\item{.name}{Optional node name. Can be a string or an unquoted name.}
+
+\item{.from}{Optional upstream node references. Can be a character vector,
+unquoted names, or \code{c(...)} of unquoted names.}
 }
 \value{
 The updated \code{scorch_model} with a new row appended to

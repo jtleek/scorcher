@@ -25,6 +25,11 @@
 #' @param inputs Character vector of upstream node names. If \code{NULL}
 #'   (default), resolved automatically (last node or sole input).
 #'
+#' @param .name Optional node name. Can be a string or an unquoted name.
+#'
+#' @param .from Optional upstream node reference. Can be a string or an
+#'   unquoted name.
+#'
 #' @param p Numeric. Dropout probability (default 0.5).
 #'
 #' @param ... Additional arguments passed to \code{torch::nn_dropout()}.

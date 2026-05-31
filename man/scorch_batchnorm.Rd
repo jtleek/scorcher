@@ -38,6 +38,11 @@ for multiples (e.g., \code{"fc1"}, \code{"fc2"}).}
 \code{"2d"} for 4D inputs (conv2d layers),
 \code{"3d"} for 5D inputs (conv3d layers).}
 
+\item{.name}{Optional node name. Can be a string or an unquoted name.}
+
+\item{.from}{Optional upstream node reference. Can be a string or an
+unquoted name.}
+
 \item{...}{Additional arguments passed to the underlying
 \code{torch::nn_batch_norm*} function (e.g., \code{momentum},
 \code{eps}).}

@@ -2,7 +2,6 @@
 % Please edit documentation in R/plot_scorch_model.R
 \name{plot_scorch_model}
 \alias{plot_scorch_model}
-\alias{plot.scorch_model}
 \title{Plot a Scorch Model Architecture}
 \usage{
 plot_scorch_model(
@@ -13,13 +12,9 @@ plot_scorch_model(
   input_shapes = NULL,
   ...
 )
-
-\method{plot}{scorch_model}(x, ...)
 }
 \arguments{
 \item{scorch_model}{A \code{scorch_model} object.}
-
-\item{x}{A \code{scorch_model} object.}
 
 \item{detail}{How much to show in each node. \code{"simple"} shows only the
 layer type. \code{"full"} adds the node name, upstream inputs, parameter
@@ -53,24 +48,30 @@ plot(model, detail = "simple")
 plot(model, detail = "full", input_shapes = list(features = "batch x 4"))
 plot_scorch_model(model, rankdir = "LR")
 }
+
 }
 \seealso{
-Other model construction:
+Other model construction: 
+\code{\link{as_torch_module}()},
 \code{\link{compile_scorch}()},
 \code{\link{initiate_scorch}()},
 \code{\link{print.scorch_model}()},
 \code{\link{scorch_add_skip}()},
 \code{\link{scorch_attention}()},
 \code{\link{scorch_batchnorm}()},
+\code{\link{scorch_block}()},
 \code{\link{scorch_concat}()},
 \code{\link{scorch_conv_transpose}()},
 \code{\link{scorch_dropout}()},
 \code{\link{scorch_flatten}()},
 \code{\link{scorch_function}()},
+\code{\link{scorch_graph_data}()},
 \code{\link{scorch_input}()},
 \code{\link{scorch_layer}()},
 \code{\link{scorch_output}()},
 \code{\link{scorch_pool}()},
-\code{\link{scorch_transformer_encoder}()}
+\code{\link{scorch_spec}()},
+\code{\link{scorch_transformer_encoder}()},
+\code{\link{validate_scorch_graph}()}
 }
 \concept{model construction}

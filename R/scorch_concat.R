@@ -26,6 +26,11 @@
 #' @param inputs Character vector of two or more upstream node names
 #'   whose outputs will be concatenated.
 #'
+#' @param .name Optional node name. Can be a string or an unquoted name.
+#'
+#' @param .from Optional upstream node references. Can be a character vector,
+#'   unquoted names, or \code{c(...)} of unquoted names.
+#'
 #' @param dim Integer. Dimension along which to concatenate (default 2,
 #'   the feature dimension). Dim 1 is the batch dimension in R torch
 #'   (1-indexed).

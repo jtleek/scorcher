@@ -2,6 +2,12 @@
 # STATIC PLOTTING HELPERS
 #===============================================================================
 
+utils::globalVariables(c(
+  "check", "epoch", "event", "is_output", "loss", "node_type",
+  "param_count", "status", "timestamp", "trainable",
+  "x", "x_from", "x_to", "y", "y_from", "y_to"
+))
+
 #' Return Scorch Graph Plot Data
 #'
 #' @param scorch_model A \code{scorch_model} object.

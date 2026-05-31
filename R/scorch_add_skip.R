@@ -27,6 +27,11 @@
 #'   "skip_path")}. Both upstream nodes must produce tensors of the
 #'   same shape.
 #'
+#' @param .name Optional node name. Can be a string or an unquoted name.
+#'
+#' @param .from Optional length-2 upstream node references. Can be a character
+#'   vector, unquoted names, or \code{c(...)} of unquoted names.
+#'
 #' @returns The updated \code{scorch_model} with a new row appended to
 #'   its \code{graph} tibble.
 #'

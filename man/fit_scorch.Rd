@@ -37,6 +37,13 @@ for value clipping, or \code{NULL} (default) for no clipping.}
 \code{"norm"}: \code{list(max_norm = 1.0)}. For \code{"value"}:
 \code{list(clip_value = 0.5)}.}
 
+\item{device}{Character. Device to train on. Use \code{"auto"} to select
+CUDA when available and CPU otherwise, or specify \code{"cpu"} or
+\code{"cuda"}.}
+
+\item{seed}{Optional integer seed used to make the training run more
+reproducible.}
+
 \item{...}{Additional arguments passed to \code{preprocess_fn}.}
 }
 \value{
@@ -82,7 +89,10 @@ model <- fit_scorch(
 }
 \seealso{
 Other model training: 
+\code{\link{as_luz_module}()},
 \code{\link{as_torch}()},
-\code{\link{as_luz_module}()}
+\code{\link{scorch_evaluate}()},
+\code{\link{scorch_evaluate_predictions}()},
+\code{\link{scorch_predict}()}
 }
 \concept{model training}

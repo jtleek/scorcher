@@ -26,6 +26,11 @@
 #' @param inputs Character vector of upstream node names. If \code{NULL}
 #'   (default), resolved automatically (last node or sole input).
 #'
+#' @param .name Optional node name. Can be a string or an unquoted name.
+#'
+#' @param .from Optional upstream node reference. Can be a string or an
+#'   unquoted name.
+#'
 #' @param method Character. Pooling method:
 #'   \code{"max"} (default), \code{"avg"}, \code{"adaptive_max"},
 #'   or \code{"adaptive_avg"}.
